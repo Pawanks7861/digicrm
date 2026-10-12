@@ -25,9 +25,11 @@ Open `http://127.0.0.1:8000`
 
 | Email | Role |
 |-------|------|
-| admin@digicrm.test | Super Admin |
-| manager@digicrm.test | Admin |
+| superadmin@digicrm.test | Super Admin (Owner) |
+| admin@digicrm.test | Admin |
+| manager@digicrm.test | Admin + Manager (HR) |
 | am@digicrm.test | Account Manager |
+| employee@digicrm.test | Team Member / Employee |
 | designer@digicrm.test | Team Member |
 
 ## Architecture

@@ -14,53 +14,48 @@ class DemoAgencySeeder extends Seeder
 {
     public function run(): void
     {
-        $super = User::updateOrCreate(
-            ['email' => 'admin@digicrm.test'],
-            [
-                'name' => 'Super Admin',
-                'password' => Hash::make('password'),
-                'job_title' => 'Owner',
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
+        // Demo password for all seeded accounts: password
+        $super = $this->seedUser(
+            'superadmin@digicrm.test',
+            'Super Admin',
+            'Owner',
+            ['super_admin']
         );
-        $super->syncRoles(['super_admin']);
 
-        $admin = User::updateOrCreate(
-            ['email' => 'manager@digicrm.test'],
-            [
-                'name' => 'Agency Manager',
-                'password' => Hash::make('password'),
-                'job_title' => 'Agency Manager',
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
+        $admin = $this->seedUser(
+            'admin@digicrm.test',
+            'Agency Admin',
+            'Administrator',
+            ['admin']
         );
-        $admin->syncRoles(['admin']);
 
-        $am = User::updateOrCreate(
-            ['email' => 'am@digicrm.test'],
-            [
-                'name' => 'Priya Account Manager',
-                'password' => Hash::make('password'),
-                'job_title' => 'Account Manager',
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
+        $manager = $this->seedUser(
+            'manager@digicrm.test',
+            'Agency Manager',
+            'People Manager',
+            ['admin', 'manager']
         );
-        $am->syncRoles(['account_manager']);
 
-        $designer = User::updateOrCreate(
-            ['email' => 'designer@digicrm.test'],
-            [
-                'name' => 'Aman Designer',
-                'password' => Hash::make('password'),
-                'job_title' => 'Graphic Designer',
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
+        $am = $this->seedUser(
+            'am@digicrm.test',
+            'Priya Account Manager',
+            'Account Manager',
+            ['account_manager']
         );
-        $designer->syncRoles(['team_member']);
+
+        $employee = $this->seedUser(
+            'employee@digicrm.test',
+            'Demo Employee',
+            'Team Member',
+            ['team_member', 'employee']
+        );
+
+        $designer = $this->seedUser(
+            'designer@digicrm.test',
+            'Aman Designer',
+            'Graphic Designer',
+            ['team_member']
+        );
 
         /** @var ClientService $clients */
         $clients = app(ClientService::class);
@@ -137,5 +132,25 @@ class DemoAgencySeeder extends Seeder
                 'renewal_type' => 'auto',
             ], $super);
         }
+    }
+
+    /**
+     * @param  list<string>  $roles
+     */
+    protected function seedUser(string $email, string $name, string $jobTitle, array $roles): User
+    {
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'password' => Hash::make('password'),
+                'job_title' => $jobTitle,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+        $user->syncRoles($roles);
+
+        return $user;
     }
 }

@@ -28,10 +28,12 @@ php artisan serve
 
 Same passwords as CRM (`password`):
 
-| Email | CRM role | HR notes |
-|-------|----------|----------|
-| admin@digicrm.test | Super Admin (Owner) | Full HR + payroll permissions |
-| manager@digicrm.test | Admin + manager | Team approvals |
+| Email | Role | HR notes |
+|-------|------|----------|
+| superadmin@digicrm.test | Super Admin (Owner) | Full HR + payroll |
+| admin@digicrm.test | Admin | Agency ops |
+| manager@digicrm.test | Admin + Manager | Team approvals |
+| employee@digicrm.test | Employee | Own attendance/leave/expenses |
 | am@digicrm.test / designer@digicrm.test | Staff | Own attendance/leave/expenses |
 
 ## Routes

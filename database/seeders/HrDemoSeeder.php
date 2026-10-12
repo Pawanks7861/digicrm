@@ -20,22 +20,22 @@ class HrDemoSeeder extends Seeder
         $company = app(CompanyOrganizationService::class)->ensureDefaultCompany();
         $leaves = app(LeaveService::class);
 
-        $owner = User::where('email', 'admin@digicrm.test')->first();
+        $owner = User::where('email', 'superadmin@digicrm.test')->first();
+        $adminUser = User::where('email', 'admin@digicrm.test')->first();
         $managerUser = User::where('email', 'manager@digicrm.test')->first();
         $am = User::where('email', 'am@digicrm.test')->first();
+        $employee = User::where('email', 'employee@digicrm.test')->first();
         $designer = User::where('email', 'designer@digicrm.test')->first();
 
         $ownerEmp = $this->link($owner, $company->id, 'EMP-001', null, 'OWN');
+        $adminEmp = $this->link($adminUser, $company->id, 'EMP-005', $ownerEmp?->id, 'MGR');
         $managerEmp = $this->link($managerUser, $company->id, 'EMP-002', $ownerEmp?->id, 'MGR');
         $amEmp = $this->link($am, $company->id, 'EMP-003', $managerEmp?->id, 'EXE');
+        $employeeEmp = $this->link($employee, $company->id, 'EMP-006', $managerEmp?->id, 'EXE');
         $designerEmp = $this->link($designer, $company->id, 'EMP-004', $managerEmp?->id, 'EXE');
 
-        if ($managerUser && ! $managerUser->hasRole('manager')) {
-            $managerUser->assignRole('manager');
-        }
-
         $cl = LeaveType::where('company_id', $company->id)->where('code', 'CL')->first();
-        foreach (array_filter([$ownerEmp, $managerEmp, $amEmp, $designerEmp]) as $emp) {
+        foreach (array_filter([$ownerEmp, $adminEmp, $managerEmp, $amEmp, $employeeEmp, $designerEmp]) as $emp) {
             if ($cl && $owner) {
                 $leaves->allocate($emp, $cl, '12.00', $owner, 'seed-cl-'.$emp->id);
             }
@@ -62,7 +62,7 @@ class HrDemoSeeder extends Seeder
             ]
         );
 
-        foreach (array_filter([$managerEmp, $amEmp, $designerEmp]) as $emp) {
+        foreach (array_filter([$managerEmp, $amEmp, $employeeEmp, $designerEmp]) as $emp) {
             EmployeeSalaryAssignment::firstOrCreate(
                 [
                     'employee_id' => $emp->id,

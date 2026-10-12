@@ -107,8 +107,10 @@ Password: `password` (local seed only).
 
 | Email | Notes |
 |-------|-------|
-| admin@digicrm.test | Owner / super_admin |
+| superadmin@digicrm.test | Owner / super_admin |
+| admin@digicrm.test | Admin |
 | manager@digicrm.test | Admin + manager HR role |
-| am@digicrm.test / designer@digicrm.test | Employee self-service HR |
+| employee@digicrm.test | Employee self-service HR |
+| am@digicrm.test / designer@digicrm.test | Staff self-service HR |
 
 See also [`HRMS_SETUP.md`](./HRMS_SETUP.md).

@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        color: #1c1c1c;
+    }
+
+    body {
+        background:
+            linear-gradient(180deg, #f8e7b0 0%, #f3d98a 28%, #e8c96a 62%, #d7b45a 100%);
+        color: #1c1c1c;
+    }
+
+    h1 {
+        letter-spacing: -0.03em;
+    }
+
+    ::selection {
+        background: #f3d98a;
+        color: #1c1c1c;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+}
+
+@layer components {
+    .nav-active {
+        background: linear-gradient(90deg, #fff1e4 0%, #f6e8ff 100%);
+        color: #1c1c1c;
+    }
+}
+
+main .rounded-xl.border.bg-white,
+main .rounded-lg.border.bg-white,
+main .rounded-xl.bg-white.border,
+main .rounded-lg.bg-white.shadow,
+main .rounded-lg.bg-white.shadow-sm,
+main .rounded-xl.border.border-slate-200,
+main .rounded-lg.border.border-slate-200 {
+    border-radius: 1.4rem;
+    border-color: #f0e4d2;
+    background-color: #fffcf7;
+    box-shadow: 0 8px 24px rgba(168, 132, 62, 0.06);
+}
+
+main h1.text-2xl,
+main h1.text-xl {
+    font-size: 1.7rem;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #1c1c1c;
+}
+
+main table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+}
+
+main thead th {
+    background: #fbf6ea;
+    color: #8a8178;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #f0e4d2;
+}
+
+main tbody td {
+    border-bottom: 1px solid #f6efe4;
+    color: #1c1c1c;
+}
+
+main tbody tr {
+    transition: background-color 160ms ease;
+}
+
+main tbody tr:hover {
+    background: rgba(243, 217, 138, 0.22);
+}
+
+main input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),
+main select,
+main textarea {
+    border-radius: 0.9rem;
+    border-color: #eadfce;
+    background: #fffaf3;
+    color: #1c1c1c;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+main input:focus,
+main select:focus,
+main textarea:focus {
+    border-color: #e8883a;
+    box-shadow: 0 0 0 3px rgba(232, 136, 58, 0.16);
+    outline: none;
+}
+
+main a.bg-teal-700,
+main button.bg-teal-700,
+main .bg-gray-800 {
+    background-color: #e8883a;
+    border-radius: 999px;
+    color: #fff;
+}
+
+main a.bg-teal-700:hover,
+main button.bg-teal-700:hover {
+    background-color: #d47428;
+}

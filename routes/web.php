@@ -57,6 +57,10 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TimeEntryController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WorkloadController;
+use App\Http\Controllers\Hr\AttendanceController as HrAttendanceController;
+use App\Http\Controllers\Hr\EmployeeController as HrEmployeeController;
+use App\Http\Controllers\Hr\HrDashboardController;
+use App\Http\Controllers\Hr\LeaveRequestController as HrLeaveRequestController;
 use App\Services\ClientApprovalService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -82,6 +86,23 @@ Route::middleware(['auth', 'verified', 'agency'])->group(function () {
     Route::delete('settings/company/logo', [CompanySettingsController::class, 'removeLogo'])->name('settings.company.logo.remove');
     Route::post('settings/company/favicon', [CompanySettingsController::class, 'uploadFavicon'])->name('settings.company.favicon');
     Route::delete('settings/company/favicon', [CompanySettingsController::class, 'removeFavicon'])->name('settings.company.favicon.remove');
+
+    Route::prefix('hr')->name('hr.')->group(function () {
+        Route::get('/', HrDashboardController::class)->name('dashboard');
+        Route::get('employees', [HrEmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/create', [HrEmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [HrEmployeeController::class, 'store'])->name('employees.store');
+        Route::get('employees/{employee}', [HrEmployeeController::class, 'show'])->name('employees.show');
+        Route::get('employees/{employee}/edit', [HrEmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [HrEmployeeController::class, 'update'])->name('employees.update');
+        Route::get('attendance', [HrAttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('attendance/punch', [HrAttendanceController::class, 'punch'])->name('attendance.punch');
+        Route::get('leave', [HrLeaveRequestController::class, 'index'])->name('leave.index');
+        Route::post('leave', [HrLeaveRequestController::class, 'store'])->name('leave.store');
+        Route::post('leave/{leaveRequest}/approve', [HrLeaveRequestController::class, 'approve'])->name('leave.approve');
+        Route::post('leave/{leaveRequest}/reject', [HrLeaveRequestController::class, 'reject'])->name('leave.reject');
+        Route::post('leave/{leaveRequest}/cancel', [HrLeaveRequestController::class, 'cancel'])->name('leave.cancel');
+    });
 
     Route::get('chat', [ChatController::class, 'index'])->name('chat.index');
     Route::get('chat/feed', [ChatController::class, 'feed'])->name('chat.feed');

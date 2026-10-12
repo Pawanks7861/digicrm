@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             DelayReasonSeeder::class,
             DemoAgencySeeder::class,
+            HrDemoSeeder::class,
         ]);
     }
 }

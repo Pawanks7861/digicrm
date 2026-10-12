@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->hasMany(Client::class, 'account_manager_id');
     }
 
+    public function employee(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Employee::class);
+    }
+
     public function pushSubscriptions(): HasMany
     {
         return $this->hasMany(PushSubscription::class);

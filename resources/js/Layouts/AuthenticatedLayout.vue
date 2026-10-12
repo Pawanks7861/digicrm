@@ -96,6 +96,14 @@ const canCompany = computed(() => {
     const perms = page.props.auth?.user?.permissions || [];
     return perms.includes('company_settings.view') || perms.includes('company_settings.manage') || perms.includes('company_branding.manage') || (page.props.auth?.user?.roles || []).includes('super_admin');
 });
+const canHr = computed(() => {
+    const perms = page.props.auth?.user?.permissions || [];
+    return perms.includes('hr.dashboard.view')
+        || perms.includes('hr.employees.view_own')
+        || perms.includes('hr.employees.view_all')
+        || perms.includes('hr.attendance.view_own')
+        || (page.props.auth?.user?.roles || []).includes('super_admin');
+});
 const brand = computed(() => page.props.branding || {});
 
 const activeTimer = computed(() => page.props.activeTimer);
@@ -143,6 +151,9 @@ const nav = computed(() => {
     }
     if (canTasks.value) {
         items.push({ name: 'Tasks', icon: 'tasks', href: route('tasks.index'), current: route().current('tasks.*') });
+    }
+    if (canHr.value) {
+        items.push({ name: 'HR', icon: 'workload', href: route('hr.dashboard'), current: route().current('hr.*') });
     }
     if (canFollowUps.value) {
         items.push({ name: 'Follow-ups', icon: 'followups', href: route('follow-ups.index'), current: route().current('follow-ups.*') });

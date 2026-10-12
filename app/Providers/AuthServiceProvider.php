@@ -20,6 +20,12 @@ use App\Models\ServicePackage;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\DelayRecord;
+use App\Models\Employee;
+use App\Models\AttendancePunch;
+use App\Models\LeaveRequest;
+use App\Policies\AttendancePunchPolicy;
+use App\Policies\EmployeePolicy;
+use App\Policies\LeaveRequestPolicy;
 use App\Policies\CampaignDeliverablePolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\MessageAttachmentPolicy;
@@ -63,6 +69,9 @@ class AuthServiceProvider extends ServiceProvider
         Opportunity::class => OpportunityPolicy::class,
         Conversation::class => ConversationPolicy::class,
         MessageAttachment::class => MessageAttachmentPolicy::class,
+        Employee::class => EmployeePolicy::class,
+        LeaveRequest::class => LeaveRequestPolicy::class,
+        AttendancePunch::class => AttendancePunchPolicy::class,
     ];
 
     public function boot(): void

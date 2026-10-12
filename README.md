@@ -36,6 +36,22 @@ See [AGENCY_CRM_ARCHITECTURE.md](AGENCY_CRM_ARCHITECTURE.md) for phases, schema,
 
 **Phase 1 complete:** RBAC, Clients, Brand, Onboarding, Files shell, Activity log.
 
+## HRMS (integrated)
+
+People/HR modules (employees, attendance, leave, approvals, payroll foundations). Open `/hr` after migrate --seed. CRM time tracking remains separate from attendance.
+
+## Documentation index
+
+| Doc | Purpose |
+|-----|---------|
+| [AGENCY_CRM_ARCHITECTURE.md](AGENCY_CRM_ARCHITECTURE.md) | CRM phases, schema, permissions |
+| [docs/CRM_HRMS_SYSTEM_GUIDE.md](docs/CRM_HRMS_SYSTEM_GUIDE.md) | How HRMS actually works (boundaries, workflows) |
+| [docs/CRM_HRMS_GAP_ANALYSIS.md](docs/CRM_HRMS_GAP_ANALYSIS.md) | Implementation gap analysis + checklist |
+| [docs/HRMS_SETUP.md](docs/HRMS_SETUP.md) | HRMS quick setup |
+| [docs/CRM_HRMS_OPERATIONS_RUNBOOK.md](docs/CRM_HRMS_OPERATIONS_RUNBOOK.md) | Ops, payroll prep, recovery |
+| [docs/testing/CRM_HRMS_EDGE_CASE_MATRIX.md](docs/testing/CRM_HRMS_EDGE_CASE_MATRIX.md) | Edge-case matrix with evidence |
+| [docs/testing/CRM_HRMS_VALIDATION_REPORT.md](docs/testing/CRM_HRMS_VALIDATION_REPORT.md) | QA commands and results |
+
 ## MySQL (optional)
 
 Set `DB_CONNECTION=mysql` and database credentials in `.env`. Permission columns use length 125 for InnoDB index limits. Then:
@@ -47,5 +63,7 @@ php artisan migrate --seed
 ## Tests
 
 ```bash
+php artisan test tests/Feature/Hr
 php artisan test --filter=ClientModuleTest
+# Without host PHP: docker run --rm -v "$PWD:/app" -w /app php:8.1-cli bash ./scripts/docker-hr-test.sh
 ```

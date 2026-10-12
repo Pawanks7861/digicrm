@@ -70,6 +70,17 @@ class RolePermissionSeeder extends Seeder
             'lead_reports.view', 'lead_sources.manage', 'lead_assignment_rules.manage',
             'company_settings.view', 'company_settings.manage', 'company_branding.manage',
             'chat.use', 'chat.create_group', 'chat.upload_attachment', 'chat.manage_own_groups', 'chat.admin_recovery',
+            // HRMS
+            'hr.dashboard.view', 'hr.dashboard.manager', 'hr.dashboard.owner',
+            'hr.view_all',
+            'hr.employees.view_own', 'hr.employees.view_team', 'hr.employees.view_all', 'hr.employees.manage',
+            'hr.attendance.view_own', 'hr.attendance.view_team', 'hr.attendance.manage', 'hr.attendance.punch',
+            'hr.leave.view_own', 'hr.leave.view_team', 'hr.leave.request', 'hr.leave.approve', 'hr.leave.manage',
+            'hr.approvals.act_as_owner',
+            'hr.documents.view_own', 'hr.documents.view_team', 'hr.documents.review', 'hr.documents.manage',
+            'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve', 'hr.expenses.pay',
+            'hr.payroll.view', 'hr.payroll.manage', 'hr.salary.manage',
+            'hr.org.manage',
         ];
 
         foreach ($permissions as $permission) {
@@ -81,6 +92,8 @@ class RolePermissionSeeder extends Seeder
         $am = Role::findOrCreate('account_manager');
         $team = Role::findOrCreate('team_member');
         $client = Role::findOrCreate('client');
+        $manager = Role::findOrCreate('manager');
+        $employeeRole = Role::findOrCreate('employee');
 
         $super->syncPermissions(Permission::all());
 
@@ -141,6 +154,36 @@ class RolePermissionSeeder extends Seeder
             'opportunities.view', 'opportunities.create', 'opportunities.edit',
             'lead_reports.view',
             'chat.use', 'chat.create_group', 'chat.upload_attachment', 'chat.manage_own_groups',
+            'hr.dashboard.view', 'hr.dashboard.manager',
+            'hr.employees.view_own', 'hr.employees.view_team',
+            'hr.attendance.view_own', 'hr.attendance.view_team', 'hr.attendance.punch',
+            'hr.leave.view_own', 'hr.leave.view_team', 'hr.leave.request', 'hr.leave.approve',
+            'hr.documents.view_own', 'hr.documents.view_team',
+            'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve',
+        ]);
+
+        $manager->syncPermissions([
+            'hr.dashboard.view', 'hr.dashboard.manager',
+            'hr.employees.view_own', 'hr.employees.view_team',
+            'hr.attendance.view_own', 'hr.attendance.view_team', 'hr.attendance.punch',
+            'hr.leave.view_own', 'hr.leave.view_team', 'hr.leave.request', 'hr.leave.approve',
+            'hr.documents.view_own', 'hr.documents.view_team',
+            'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve',
+            'tasks.view', 'tasks.view_assigned', 'tasks.create', 'tasks.edit', 'tasks.assign',
+            'notifications.view',
+            'chat.use',
+        ]);
+
+        $employeeRole->syncPermissions([
+            'hr.dashboard.view',
+            'hr.employees.view_own',
+            'hr.attendance.view_own', 'hr.attendance.punch',
+            'hr.leave.view_own', 'hr.leave.request',
+            'hr.documents.view_own',
+            'hr.expenses.view_own', 'hr.expenses.request',
+            'tasks.view', 'tasks.view_assigned',
+            'notifications.view',
+            'chat.use',
         ]);
 
         $team->syncPermissions([
@@ -159,6 +202,12 @@ class RolePermissionSeeder extends Seeder
             'leads.view', 'leads.edit', 'leads.manage_status',
             'opportunities.view',
             'chat.use', 'chat.create_group', 'chat.upload_attachment', 'chat.manage_own_groups',
+            'hr.dashboard.view',
+            'hr.employees.view_own',
+            'hr.attendance.view_own', 'hr.attendance.punch',
+            'hr.leave.view_own', 'hr.leave.request',
+            'hr.documents.view_own',
+            'hr.expenses.view_own', 'hr.expenses.request',
         ]);
 
         $client->syncPermissions([

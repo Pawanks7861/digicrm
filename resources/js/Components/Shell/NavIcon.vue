@@ -18,6 +18,7 @@ import {
     Megaphone,
     MessageCircle,
     Package,
+    Settings,
     Timer,
     UserRoundSearch,
     Users,
@@ -48,6 +49,7 @@ const icons = {
     automations: Workflow,
     reviews: CheckCircle,
     packages: Package,
+    settings: Settings,
 };
 
 const props = defineProps({

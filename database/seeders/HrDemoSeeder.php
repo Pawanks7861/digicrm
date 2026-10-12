@@ -88,22 +88,30 @@ class HrDemoSeeder extends Seeder
         $branchId = \App\Models\Branch::where('company_id', $companyId)->where('code', 'HQ')->value('id');
         $deptId = \App\Models\Department::where('company_id', $companyId)->where('code', 'OPS')->value('id');
 
+        $attributes = [
+            'first_name' => explode(' ', $user->name)[0],
+            'last_name' => trim(strstr($user->name, ' ') ?: '') ?: null,
+            'work_email' => $user->email,
+            'phone' => $user->phone,
+            'branch_id' => $branchId,
+            'department_id' => $deptId,
+            'designation_id' => $designationId,
+            'reporting_manager_id' => $managerId,
+            'joining_date' => now()->subYear()->toDateString(),
+            'employment_type' => 'full_time',
+            'employment_status' => 'active',
+        ];
+
+        $existing = Employee::where('user_id', $user->id)->first();
+        if ($existing) {
+            $existing->update($attributes);
+
+            return $existing;
+        }
+
         return Employee::updateOrCreate(
             ['company_id' => $companyId, 'employee_code' => $code],
-            [
-                'user_id' => $user->id,
-                'first_name' => explode(' ', $user->name)[0],
-                'last_name' => trim(strstr($user->name, ' ') ?: '') ?: null,
-                'work_email' => $user->email,
-                'phone' => $user->phone,
-                'branch_id' => $branchId,
-                'department_id' => $deptId,
-                'designation_id' => $designationId,
-                'reporting_manager_id' => $managerId,
-                'joining_date' => now()->subYear()->toDateString(),
-                'employment_type' => 'full_time',
-                'employment_status' => 'active',
-            ]
+            $attributes + ['user_id' => $user->id]
         );
     }
 }

@@ -36,7 +36,7 @@ const nav = computed(() => {
         <header class="sticky top-0 z-20 px-4 py-4">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
                 <div class="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-                    <img v-if="brand.logo_url" :src="brand.logo_url" alt="" class="h-8 w-8 rounded-lg object-contain" />
+                    <img v-if="brand.logo_url" :src="brand.logo_url" :alt="brand.name || 'Company logo'" class="h-12 w-12 rounded-xl object-contain" />
                     {{ brand.name || page.props.appName || 'Client Portal' }}
                 </div>
                 <button type="button" class="rounded-full bg-card px-3 py-1.5 text-sm lg:hidden" @click="mobile = !mobile">Menu</button>

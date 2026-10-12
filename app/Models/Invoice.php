@@ -65,7 +65,7 @@ class Invoice extends Model
             return 'overdue';
         }
 
-        return $this->status;
+        return $this->status ?: 'draft';
     }
 
     public function isEditable(): bool

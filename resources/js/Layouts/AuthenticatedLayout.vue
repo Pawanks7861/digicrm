@@ -92,9 +92,16 @@ const canPipeline = computed(() => {
     return perms.includes('opportunities.view');
 });
 const canChat = computed(() => (page.props.auth?.user?.permissions || []).includes('chat.use') || (page.props.auth?.user?.roles || []).includes('super_admin'));
-const canCompany = computed(() => {
+const canSettings = computed(() => {
     const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('company_settings.view') || perms.includes('company_settings.manage') || perms.includes('company_branding.manage') || (page.props.auth?.user?.roles || []).includes('super_admin');
+    const roles = page.props.auth?.user?.roles || [];
+    return roles.includes('super_admin')
+        || perms.includes('users.manage')
+        || perms.includes('users.view')
+        || perms.includes('audit_logs.view')
+        || perms.includes('company_settings.view')
+        || perms.includes('company_settings.manage')
+        || perms.includes('company_branding.manage');
 });
 const canHr = computed(() => {
     const perms = page.props.auth?.user?.permissions || [];
@@ -191,12 +198,15 @@ const nav = computed(() => {
     if (canPackages.value) {
         items.push({ name: 'Packages', icon: 'packages', href: route('service-packages.index'), current: route().current('service-packages.*') || route().current('client-packages.*') });
     }
+    if (canSettings.value) {
+        items.push({ name: 'Settings', icon: 'settings', href: route('settings.index'), current: route().current('settings.*') });
+    }
     return items;
 });
 
 const railItems = computed(() => nav.value.slice(0, 8));
 const overflowItems = computed(() => nav.value.slice(8));
-const currentNav = computed(() => nav.value.find((item) => item.current) || (route().current('settings.company') ? { name: 'Company Settings' } : null));
+const currentNav = computed(() => nav.value.find((item) => item.current));
 </script>
 
 <template>
@@ -207,11 +217,11 @@ const currentNav = computed(() => nav.value.find((item) => item.current) || (rou
         <div class="flex min-h-[calc(100vh-1rem)] overflow-hidden rounded-[28px] bg-[#fffdf9] shadow-float sm:min-h-[calc(100vh-2rem)]">
             <aside class="hidden w-[232px] shrink-0 flex-col border-r border-line/70 px-3 py-5 lg:flex">
                 <Link :href="route('dashboard')" class="mb-6 flex items-center gap-2.5 px-2">
-                    <img v-if="brand.logo_url" :src="brand.logo_url" alt="" class="h-9 w-9 rounded-xl object-contain" />
+                    <img v-if="brand.logo_url" :src="brand.logo_url" :alt="brand.name || 'Company logo'" class="h-16 w-16 shrink-0 rounded-2xl object-contain" />
                     <span v-else class="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-white">
                         {{ (brand.name || $page.props.appName || 'D').charAt(0) }}
                     </span>
-                    <span class="text-[15px] font-semibold tracking-tight">{{ brand.name || $page.props.appName || 'DigiCRM' }}</span>
+                    <span class="text-[15px] font-semibold tracking-tight leading-tight">{{ brand.name || $page.props.appName || 'DigiCRM' }}</span>
                 </Link>
                 <nav class="flex-1 space-y-1 overflow-y-auto pr-1">
                     <Link
@@ -236,7 +246,7 @@ const currentNav = computed(() => nav.value.find((item) => item.current) || (rou
                 :class="showingMobile ? 'translate-x-0' : '-translate-x-full'"
             >
                 <div class="mb-4 flex items-center gap-2 px-2 text-sm font-semibold">
-                    <img v-if="brand.logo_url" :src="brand.logo_url" alt="" class="h-8 w-8 rounded-lg object-contain" />
+                    <img v-if="brand.logo_url" :src="brand.logo_url" :alt="brand.name || 'Company logo'" class="h-12 w-12 rounded-xl object-contain" />
                     {{ brand.name || $page.props.appName || 'DigiCRM' }}
                 </div>
                 <nav class="space-y-1">
@@ -299,7 +309,7 @@ const currentNav = computed(() => nav.value.find((item) => item.current) || (rou
                             </template>
                             <template #content>
                                 <DropdownLink :href="route('profile.edit')">Profile</DropdownLink>
-                                <DropdownLink v-if="canCompany" :href="route('settings.company')">Company settings</DropdownLink>
+                                <DropdownLink v-if="canSettings" :href="route('settings.index')">Settings</DropdownLink>
                                 <DropdownLink :href="route('profile.notifications')">Notification prefs</DropdownLink>
                                 <DropdownLink :href="route('logout')" method="post" as="button">Log Out</DropdownLink>
                             </template>

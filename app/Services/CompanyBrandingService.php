@@ -50,10 +50,10 @@ class CompanyBrandingService
             return null;
         }
 
-        $url = Storage::disk('public')->url($path);
+        $url = '/storage/'.ltrim(str_replace('\\', '/', $path), '/');
         $stamp = $version instanceof \DateTimeInterface ? $version->getTimestamp() : (is_numeric($version) ? (int) $version : time());
 
-        return $url.(str_contains($url, '?') ? '&' : '?').'v='.$stamp;
+        return $url.'?v='.$stamp;
     }
 
     public function deletePublic(?string $path): void

@@ -66,7 +66,7 @@ function onDrop(event, kind) {
                     @dragover.prevent
                     @drop.prevent="onDrop($event, 'logo')"
                 >
-                    <img v-if="logoPreview" :src="logoPreview" alt="Current logo" class="mx-auto h-20 w-20 object-contain" />
+                    <img v-if="logoPreview" :src="logoPreview" alt="Current logo" class="mx-auto max-h-56 w-auto max-w-full object-contain" />
                     <div v-else class="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-sun/70 text-lg font-semibold">Logo</div>
                     <p class="mt-3 text-sm font-medium">Current logo</p>
                     <label v-if="can.branding" class="mt-2 inline-block cursor-pointer text-sm text-accent">

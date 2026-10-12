@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             DelayReasonSeeder::class,
             DemoAgencySeeder::class,
             HrDemoSeeder::class,
+            DemoShowcaseSeeder::class,
         ]);
     }
 }

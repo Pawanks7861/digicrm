@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        app(ActivityLogger::class)->log('logged_in', 'auth', $request->user());
 
         $user = $request->user();
         if ($user && $user->isClientUser()) {
@@ -47,6 +49,10 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        if ($request->user()) {
+            app(ActivityLogger::class)->log('logged_out', 'auth', $request->user());
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

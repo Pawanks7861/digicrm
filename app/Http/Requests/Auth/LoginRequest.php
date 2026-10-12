@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -43,9 +44,25 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            app(ActivityLogger::class)->log('login_failed', 'auth', null, null, [
+                'email' => (string) $this->string('email'),
+            ]);
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
+            ]);
+        }
+
+        if (! Auth::user()?->is_active) {
+            $email = (string) $this->string('email');
+            Auth::logout();
+            app(ActivityLogger::class)->log('login_blocked', 'auth', null, null, [
+                'email' => $email,
+                'reason' => 'inactive',
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'This account is deactivated.',
             ]);
         }
 

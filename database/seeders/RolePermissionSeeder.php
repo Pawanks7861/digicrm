@@ -15,7 +15,7 @@ class RolePermissionSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
-            'users.manage', 'roles.manage', 'agency.settings',
+            'users.view', 'users.manage', 'roles.manage', 'agency.settings', 'audit_logs.view',
             'clients.view', 'clients.view_all', 'clients.create', 'clients.update', 'clients.delete',
             'finance.view', 'finance.internal',
             'packages.manage', 'packages.view', 'packages.create', 'packages.edit', 'packages.delete',

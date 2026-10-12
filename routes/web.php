@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AutomationRuleController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CompanySettingsController;
+use App\Http\Controllers\SettingsHubController;
+use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\AutomationRunController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignDeliverableController;
@@ -80,6 +83,13 @@ Route::middleware(['auth', 'verified', 'agency'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('settings', [SettingsHubController::class, 'index'])->name('settings.index');
+    Route::get('settings/users', [UserManagementController::class, 'index'])->name('settings.users.index');
+    Route::get('settings/users/create', [UserManagementController::class, 'create'])->name('settings.users.create');
+    Route::post('settings/users', [UserManagementController::class, 'store'])->name('settings.users.store');
+    Route::get('settings/users/{managedUser}/edit', [UserManagementController::class, 'edit'])->name('settings.users.edit');
+    Route::put('settings/users/{managedUser}', [UserManagementController::class, 'update'])->name('settings.users.update');
+    Route::get('settings/audit-logs', [AuditLogController::class, 'index'])->name('settings.audit-logs.index');
     Route::get('settings/company', [CompanySettingsController::class, 'edit'])->name('settings.company');
     Route::put('settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::post('settings/company/logo', [CompanySettingsController::class, 'uploadLogo'])->name('settings.company.logo');

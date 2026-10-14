@@ -186,7 +186,9 @@ Already mitigated in migrations for **empty** partial leftovers:
 /opt/cpanel/ea-php83/root/usr/bin/php artisan deploy:preflight --expect-dir=/home/happyk682/digicrm
 ```
 
-Checks PHP extensions, `.env`/`APP_KEY` presence (not value), DB connectivity, known partial migration states, writable `storage`/`bootstrap/cache`, Vite manifest, absence of `public/hot`.
+PHP preflight uses **native** checks only for mandatory gates (extensions, `.env`/`APP_KEY`, DB connectivity, schema diagnostics, writable paths, Vite manifest, `public/hot`). It does **not** require `exec` / `shell_exec` / `proc_open`.
+
+Optional git dirty-tree probing is skipped with a clear “unavailable” warning when process functions are disabled (common on MilesWeb). `scripts/cpanel-deploy.sh` owns executable presence (PHP, Composer, Node, npm, git) and the mandatory clean-tree check before `git pull`.
 
 ---
 

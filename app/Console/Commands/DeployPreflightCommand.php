@@ -35,6 +35,7 @@ class DeployPreflightCommand extends Command
         $this->checkPartialMigrationStates();
         $this->checkFrontendArtifacts();
         $this->checkComposerAutoload();
+        $this->checkGitWorkingTreeOptional();
 
         $this->newLine();
         if ($this->failures > 0) {
@@ -57,14 +58,16 @@ class DeployPreflightCommand extends Command
     private function checkDirectory(): void
     {
         $expect = $this->option('expect-dir');
-        if ($expect && realpath($expect) !== realpath(base_path())) {
-            $this->failMsg('Working directory mismatch. Expected '.$expect);
+        if ($expect) {
+            $expected = realpath($expect);
+            $actual = realpath(base_path());
+            if ($expected === false || $actual === false || $expected !== $actual) {
+                $this->failMsg('Working directory mismatch. Expected '.$expect);
+            } else {
+                $this->ok('Project directory');
+            }
         } else {
             $this->ok('Project directory');
-        }
-
-        if ($this->isGitRepo() && $this->gitIsDirty()) {
-            $this->warnMsg('Git working tree is dirty — commit or stash before git pull --ff-only.');
         }
     }
 
@@ -135,23 +138,30 @@ class DeployPreflightCommand extends Command
 
     private function checkWritablePaths(): void
     {
+        $pathFailures = 0;
         foreach (['storage', 'storage/framework', 'storage/logs', 'bootstrap/cache'] as $path) {
             $full = base_path($path);
             if (! File::isDirectory($full)) {
                 $this->failMsg("Missing directory: {$path}");
+                $pathFailures++;
                 continue;
             }
             if (! is_writable($full)) {
                 $this->failMsg("Not writable: {$path} (fix ownership; do not use chmod 777)");
+                $pathFailures++;
             }
         }
-        $this->ok('storage and bootstrap/cache writable checks');
+        if ($pathFailures === 0) {
+            $this->ok('storage and bootstrap/cache writable checks');
+        }
     }
 
     private function checkDiskSpace(): void
     {
         $free = @disk_free_space(base_path());
-        if ($free !== false && $free < 200 * 1024 * 1024) {
+        if ($free === false) {
+            $this->warnMsg('Disk space check unavailable (disk_free_space failed).');
+        } elseif ($free < 200 * 1024 * 1024) {
             $this->warnMsg('Less than 200MB free disk on project volume.');
         } else {
             $this->ok('Disk space');
@@ -182,7 +192,6 @@ class DeployPreflightCommand extends Command
                 $this->warnMsg('Could not read database version.');
             }
 
-            // Privilege smoke: CREATE TEMPORARY / SELECT on information_schema used by migrations.
             try {
                 DB::select('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() LIMIT 1');
                 $this->ok('information_schema readable');
@@ -202,7 +211,6 @@ class DeployPreflightCommand extends Command
 
         $ran = collect(DB::table('migrations')->pluck('migration'));
 
-        // Known partial: phase11 pending but extension columns already present.
         $phase11 = '2026_09_25_210000_create_phase11_performance_tables';
         if (! $ran->contains($phase11) && Schema::hasTable('marketing_metric_snapshots')) {
             if (Schema::hasColumn('marketing_metric_snapshots', 'campaign_id')
@@ -217,17 +225,14 @@ class DeployPreflightCommand extends Command
             if (MysqlSchema::hasIndex('marketing_metric_snapshots', 'mms_unique')
                 && ! MysqlSchema::hasIndexLeadingWith('marketing_metric_snapshots', 'client_id')
             ) {
-                // Should not happen if mms_unique exists (it leads with client_id), but keep as diagnostic.
                 $this->warnMsg('mms_unique present; ensure alternate client_id index before drop (migration handles this).');
             }
         }
 
-        // Permissions leftover without roles.
         if (Schema::hasTable('permissions') && ! Schema::hasTable('roles') && ! $ran->contains('2026_09_25_062849_create_permission_tables')) {
             $this->warnMsg('Partial permission schema detected (permissions without roles). Empty incompatible tables are repaired; populated ones abort.');
         }
 
-        // clients partial without users FK readiness.
         if (Schema::hasTable('clients') && ! $ran->contains('2026_09_25_100100_create_clients_table')) {
             $this->warnMsg('clients table exists while create_clients migration is pending — empty partial tables are repaired; populated incompatible schemas abort.');
         }
@@ -264,23 +269,59 @@ class DeployPreflightCommand extends Command
         }
 
         if (! class_exists(\Doctrine\DBAL\Connection::class) && ! interface_exists(\Doctrine\DBAL\Driver::class)) {
-            // doctrine/dbal is required for some ->change() paths; phase12 now uses raw MODIFY but payroll still uses change().
             $this->warnMsg('doctrine/dbal not autoloadable; ensure production composer install includes require (not only require-dev).');
         }
     }
 
-    private function isGitRepo(): bool
+    /**
+     * Optional: dirty git tree. Prefer scripts/cpanel-deploy.sh (bash git) on shared hosting
+     * where exec/proc_open are disabled. Never report this as OK when the check cannot run.
+     */
+    private function checkGitWorkingTreeOptional(): void
     {
-        return File::isDirectory(base_path('.git'));
-    }
+        if (! File::isDirectory(base_path('.git'))) {
+            return;
+        }
 
-    private function gitIsDirty(): bool
-    {
+        if (! $this->canRunSubprocess('exec')) {
+            $this->unavailableMsg(
+                'Git working-tree check',
+                'process execution disabled (exec). scripts/cpanel-deploy.sh enforces a clean tree before git pull.'
+            );
+
+            return;
+        }
+
         $out = [];
         $code = 0;
-        @exec('git -C '.escapeshellarg(base_path()).' status --porcelain 2>&1', $out, $code);
+        exec('git -C '.escapeshellarg(base_path()).' status --porcelain 2>&1', $out, $code);
 
-        return $code === 0 && implode('', $out) !== '';
+        if ($code !== 0) {
+            $this->unavailableMsg(
+                'Git working-tree check',
+                'git status exited '.$code.'. scripts/cpanel-deploy.sh enforces a clean tree before pull.'
+            );
+
+            return;
+        }
+
+        if (implode('', $out) !== '') {
+            $this->warnMsg('Git working tree is dirty — commit or stash before git pull --ff-only.');
+        } else {
+            $this->ok('Git working tree clean');
+        }
+    }
+
+    private function canRunSubprocess(string $function): bool
+    {
+        if (! function_exists($function)) {
+            return false;
+        }
+
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+        $disabled = array_map('strtolower', $disabled);
+
+        return ! in_array(strtolower($function), $disabled, true);
     }
 
     private function ok(string $msg): void
@@ -292,6 +333,13 @@ class DeployPreflightCommand extends Command
     {
         $this->warnings++;
         $this->line('<comment>!</comment> '.$msg);
+    }
+
+    private function unavailableMsg(string $check, string $detail): void
+    {
+        // Not a pass; not a hard failure — deploy script owns the mandatory git/tooling gates.
+        $this->warnings++;
+        $this->line("<comment>~</comment> {$check} unavailable: {$detail}");
     }
 
     private function failMsg(string $msg): void

@@ -32,9 +32,33 @@ export PATH="${NODE_DIR}:${PATH}"
 cd "$PROJECT_DIR"
 
 echo "==> DigiCRM deploy in $(pwd)"
+
+# External executable checks live here (not in PHP artisan preflight):
+# shared hosting often disables PHP exec/shell_exec/proc_open.
+require_bin() {
+  local label="$1"
+  local bin="$2"
+  if [[ -f "$bin" || -x "$bin" ]]; then
+    return 0
+  fi
+  if command -v "$bin" >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "ERROR: ${label} not found: ${bin}" >&2
+  exit 1
+}
+
+require_bin "PHP CLI" "$PHP_BIN"
+require_bin "Composer" "$COMPOSER_BIN"
+require_bin "node" "node"
+require_bin "npm" "npm"
+require_bin "git" "git"
+
 echo "==> PHP: $($PHP_BIN -v | head -n1)"
-echo "==> Node: $(command -v node && node -v)"
-echo "==> npm: $(command -v npm && npm -v)"
+echo "==> Composer: $($PHP_BIN "$COMPOSER_BIN" --version 2>/dev/null | head -n1 || echo present)"
+echo "==> Node: $(command -v node) ($(node -v))"
+echo "==> npm: $(command -v npm) ($(npm -v))"
+echo "==> git: $(command -v git) ($(git --version))"
 
 if [[ ! -f artisan ]]; then
   echo "ERROR: artisan not found. Wrong PROJECT_DIR?" >&2
@@ -46,6 +70,7 @@ if [[ $SKIP_PULL -eq 0 ]] && [[ -d .git ]]; then
     echo "ERROR: dirty working tree. Commit/stash before pull." >&2
     exit 1
   fi
+  echo "==> Git working tree clean"
   git pull --ff-only
 fi
 

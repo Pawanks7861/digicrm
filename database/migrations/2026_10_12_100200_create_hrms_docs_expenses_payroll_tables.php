@@ -122,7 +122,7 @@ return new class extends Migration
             $table->date('effective_from');
             $table->date('effective_to')->nullable();
             $table->timestamps();
-            $table->index(['employee_id', 'effective_from', 'effective_to']);
+            $table->index(['employee_id', 'effective_from', 'effective_to'], 'salary_emp_effective_idx');
         });
 
         Schema::create('payroll_runs', function (Blueprint $table) {

@@ -51,8 +51,17 @@ People/HR modules (employees, attendance, leave, approvals, payroll foundations)
 | [docs/CRM_HRMS_GAP_ANALYSIS.md](docs/CRM_HRMS_GAP_ANALYSIS.md) | Implementation gap analysis + checklist |
 | [docs/HRMS_SETUP.md](docs/HRMS_SETUP.md) | HRMS quick setup |
 | [docs/CRM_HRMS_OPERATIONS_RUNBOOK.md](docs/CRM_HRMS_OPERATIONS_RUNBOOK.md) | Ops, payroll prep, recovery |
+| [docs/CPANEL_DEPLOYMENT.md](docs/CPANEL_DEPLOYMENT.md) | MilesWeb/cPanel deploy, preflight, migration recovery |
 | [docs/testing/CRM_HRMS_EDGE_CASE_MATRIX.md](docs/testing/CRM_HRMS_EDGE_CASE_MATRIX.md) | Edge-case matrix with evidence |
 | [docs/testing/CRM_HRMS_VALIDATION_REPORT.md](docs/testing/CRM_HRMS_VALIDATION_REPORT.md) | QA commands and results |
+
+## Production (cPanel)
+
+See [docs/CPANEL_DEPLOYMENT.md](docs/CPANEL_DEPLOYMENT.md). Document root must be `public/`. Upgrade one-liner:
+
+```bash
+cd /home/happyk682/digicrm && export PATH="/opt/alt/alt-nodejs22/root/usr/bin:$PATH" && bash scripts/cpanel-deploy.sh
+```
 
 ## MySQL (optional)
 

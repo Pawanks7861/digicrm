@@ -104,7 +104,7 @@ return new class extends Migration
             $table->date('effective_to')->nullable();
             $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-            $table->index(['employee_id', 'effective_from', 'effective_to']);
+            $table->index(['employee_id', 'effective_from', 'effective_to'], 'epa_emp_effective_idx');
         });
 
         Schema::create('approval_requests', function (Blueprint $table) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\MysqlSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -260,48 +261,83 @@ return new class extends Migration
             $table->index(['lead_id', 'created_at']);
         });
 
-        Schema::table('quotations', function (Blueprint $table) {
-            $table->foreignId('lead_id')->nullable()->after('client_request_id')->constrained()->nullOnDelete();
-            $table->foreignId('opportunity_id')->nullable()->after('lead_id')->constrained()->nullOnDelete();
-        });
+        if (Schema::hasTable('quotations')) {
+            if (! Schema::hasColumn('quotations', 'lead_id')) {
+                Schema::table('quotations', function (Blueprint $table) {
+                    $table->foreignId('lead_id')->nullable()->after('client_request_id')->constrained()->nullOnDelete();
+                });
+            }
+            if (! Schema::hasColumn('quotations', 'opportunity_id')) {
+                Schema::table('quotations', function (Blueprint $table) {
+                    $table->foreignId('opportunity_id')->nullable()->after('lead_id')->constrained()->nullOnDelete();
+                });
+            }
+        }
 
-        Schema::table('follow_ups', function (Blueprint $table) {
-            $table->unsignedBigInteger('client_id')->nullable()->change();
-        });
+        // Drop FK → MODIFY → re-add FK (change() alone fails on MySQL with active FKs).
+        MysqlSchema::makeClientIdNullable('follow_ups');
+        MysqlSchema::makeClientIdNullable('client_communications');
 
-        Schema::table('client_communications', function (Blueprint $table) {
-            $table->unsignedBigInteger('client_id')->nullable()->change();
-        });
+        if (Schema::hasTable('client_communications') && ! Schema::hasColumn('client_communications', 'communicable_type')) {
+            Schema::table('client_communications', function (Blueprint $table) {
+                $table->nullableMorphs('communicable');
+            });
+        }
 
-        Schema::table('client_communications', function (Blueprint $table) {
-            $table->nullableMorphs('communicable');
-        });
-
-        Schema::table('client_portal_settings', function (Blueprint $table) {
-            $table->boolean('show_leads')->default(false);
-            $table->boolean('show_lead_contact_details')->default(false);
-            $table->boolean('show_lead_source')->default(false);
-            $table->boolean('show_lead_reports')->default(false);
-            $table->boolean('allow_lead_updates')->default(false);
-        });
+        if (Schema::hasTable('client_portal_settings')) {
+            foreach ([
+                'show_leads',
+                'show_lead_contact_details',
+                'show_lead_source',
+                'show_lead_reports',
+                'allow_lead_updates',
+            ] as $flag) {
+                if (! Schema::hasColumn('client_portal_settings', $flag)) {
+                    Schema::table('client_portal_settings', function (Blueprint $table) use ($flag) {
+                        $table->boolean($flag)->default(false);
+                    });
+                }
+            }
+        }
 
         (new \Database\Seeders\LeadDefaultsSeeder)->run();
     }
 
     public function down(): void
     {
-        Schema::table('client_portal_settings', function (Blueprint $table) {
-            $table->dropColumn(['show_leads', 'show_lead_contact_details', 'show_lead_source', 'show_lead_reports', 'allow_lead_updates']);
-        });
+        if (Schema::hasTable('client_portal_settings')) {
+            $drop = array_values(array_filter(
+                ['show_leads', 'show_lead_contact_details', 'show_lead_source', 'show_lead_reports', 'allow_lead_updates'],
+                static fn ($c) => Schema::hasColumn('client_portal_settings', $c)
+            ));
+            if ($drop !== []) {
+                Schema::table('client_portal_settings', function (Blueprint $table) use ($drop) {
+                    $table->dropColumn($drop);
+                });
+            }
+        }
 
-        Schema::table('client_communications', function (Blueprint $table) {
-            $table->dropMorphs('communicable');
-        });
+        if (Schema::hasTable('client_communications') && Schema::hasColumn('client_communications', 'communicable_type')) {
+            Schema::table('client_communications', function (Blueprint $table) {
+                $table->dropMorphs('communicable');
+            });
+        }
 
-        Schema::table('quotations', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('opportunity_id');
-            $table->dropConstrainedForeignId('lead_id');
-        });
+        // Revert nullable client_id only when no orphan nulls would violate NOT NULL.
+        // Leave columns nullable on rollback to avoid data loss; document as known limitation.
+
+        if (Schema::hasTable('quotations')) {
+            if (Schema::hasColumn('quotations', 'opportunity_id')) {
+                Schema::table('quotations', function (Blueprint $table) {
+                    $table->dropConstrainedForeignId('opportunity_id');
+                });
+            }
+            if (Schema::hasColumn('quotations', 'lead_id')) {
+                Schema::table('quotations', function (Blueprint $table) {
+                    $table->dropConstrainedForeignId('lead_id');
+                });
+            }
+        }
 
         Schema::dropIfExists('lead_notes');
         Schema::dropIfExists('opportunities');

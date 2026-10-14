@@ -46,6 +46,9 @@ class LeaveService
             }
 
             $type = LeaveType::where('company_id', $employee->company_id)->whereKey($data['leave_type_id'])->firstOrFail();
+            if ($employee->employment_status === 'probation' && $type->probation_eligible === false) {
+                throw ValidationException::withMessages(['leave_type_id' => 'This leave type is not available during probation.']);
+            }
             $start = Carbon::parse($data['start_date'])->startOfDay();
             $end = Carbon::parse($data['end_date'])->startOfDay();
             if ($end->lt($start)) {
@@ -54,6 +57,15 @@ class LeaveService
 
             $startUnit = $data['start_unit'] ?? 'full_day';
             $endUnit = $data['end_unit'] ?? 'full_day';
+            if (! $type->allow_half_day && ($startUnit !== 'full_day' || $endUnit !== 'full_day')) {
+                throw ValidationException::withMessages(['start_unit' => 'This leave type does not allow half days.']);
+            }
+            if ((int) $type->min_notice_days > 0 && $start->copy()->startOfDay()->lt(now()->startOfDay()->addDays((int) $type->min_notice_days))) {
+                throw ValidationException::withMessages(['start_date' => 'This leave type requires more notice.']);
+            }
+            if ($type->max_consecutive_days && $start->diffInDays($end) + 1 > (int) $type->max_consecutive_days) {
+                throw ValidationException::withMessages(['end_date' => 'This request exceeds the maximum consecutive days.']);
+            }
             $days = $this->calculateDays($start, $end, $startUnit, $endUnit, $type);
             $this->assertNoOverlap($employee, $start->toDateString(), $end->toDateString(), $startUnit, $endUnit);
 

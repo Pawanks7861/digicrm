@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     requests: Object,
@@ -30,7 +30,8 @@ const label = (v) => (v || '').replaceAll('_', ' ');
     <Head title="Leave" />
     <AuthenticatedLayout>
         <div class="mb-6">
-            <h1 class="text-2xl font-semibold tracking-tight">Leave</h1>
+            <Link :href="route('hr.dashboard')" class="text-sm text-teal-700 hover:underline">← People & HR</Link>
+            <h1 class="mt-1 text-2xl font-semibold tracking-tight">Leave</h1>
             <p class="mt-1 text-sm text-slate-500">Balances use a ledger. Pending requests reserve days until approved or cancelled.</p>
         </div>
 

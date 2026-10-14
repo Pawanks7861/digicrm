@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     employee: Object,
@@ -21,15 +21,20 @@ const form = useForm({
     department_id: props.employee?.department_id || '',
     designation_id: props.employee?.designation_id || '',
     reporting_manager_id: props.employee?.reporting_manager_id || '',
-    joining_date: props.employee?.joining_date || '',
-    exit_date: props.employee?.exit_date || '',
+    joining_date: String(props.employee?.joining_date || '').slice(0, 10),
+    exit_date: String(props.employee?.exit_date || '').slice(0, 10),
+    probation_start: String(props.employee?.probation_start || '').slice(0, 10),
+    probation_end: String(props.employee?.probation_end || '').slice(0, 10),
+    probation_status: props.employee?.probation_status || '',
+    confirmation_date: String(props.employee?.confirmation_date || '').slice(0, 10),
+    confirmation_status: props.employee?.confirmation_status || '',
     employment_type: props.employee?.employment_type || 'full_time',
     employment_status: props.employee?.employment_status || 'active',
 });
 
 const submit = () => {
     const payload = { ...form.data() };
-    ['user_id', 'branch_id', 'department_id', 'designation_id', 'reporting_manager_id', 'joining_date', 'exit_date'].forEach((k) => {
+    ['user_id', 'branch_id', 'department_id', 'designation_id', 'reporting_manager_id', 'joining_date', 'exit_date', 'probation_start', 'probation_end', 'probation_status', 'confirmation_date', 'confirmation_status'].forEach((k) => {
         if (payload[k] === '') payload[k] = null;
     });
     if (props.employee) {
@@ -45,7 +50,8 @@ const label = (v) => (v || '').replaceAll('_', ' ');
 <template>
     <Head :title="employee ? 'Edit employee' : 'Add employee'" />
     <AuthenticatedLayout>
-        <h1 class="mb-6 text-2xl font-semibold tracking-tight">{{ employee ? 'Edit employee' : 'Add employee' }}</h1>
+        <Link :href="route('hr.employees.index')" class="text-sm text-teal-700 hover:underline">← Employees</Link>
+        <h1 class="mb-6 mt-1 text-2xl font-semibold tracking-tight">{{ employee ? 'Edit employee' : 'Add employee' }}</h1>
         <form class="max-w-3xl space-y-4 rounded-2xl border border-slate-200 bg-white p-5" @submit.prevent="submit">
             <div class="grid gap-3 sm:grid-cols-2">
                 <div><InputLabel value="Employee code" /><TextInput v-model="form.employee_code" class="mt-1 w-full" required /></div>
@@ -90,6 +96,10 @@ const label = (v) => (v || '').replaceAll('_', ' ');
                 </div>
                 <div><InputLabel value="Joining date" /><TextInput v-model="form.joining_date" type="date" class="mt-1 w-full" /></div>
                 <div><InputLabel value="Exit date" /><TextInput v-model="form.exit_date" type="date" class="mt-1 w-full" /></div>
+                <div><InputLabel value="Probation start" /><TextInput v-model="form.probation_start" type="date" class="mt-1 w-full" /></div>
+                <div><InputLabel value="Probation end" /><TextInput v-model="form.probation_end" type="date" class="mt-1 w-full" /></div>
+                <div><InputLabel value="Probation status" /><TextInput v-model="form.probation_status" class="mt-1 w-full" /></div>
+                <div><InputLabel value="Confirmation date" /><TextInput v-model="form.confirmation_date" type="date" class="mt-1 w-full" /></div>
                 <div>
                     <InputLabel value="Employment type" />
                     <select v-model="form.employment_type" class="mt-1 w-full rounded-lg border-slate-200 text-sm">

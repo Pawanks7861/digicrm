@@ -114,8 +114,72 @@ class ClientController extends Controller
             $portalSettings = \App\Models\ClientPortalSetting::forClient($client);
         }
 
+        $contentItems = [];
+        if ($request->user()->can('content.view')) {
+            $contentItems = \App\Models\ContentItem::query()
+                ->where('client_id', $client->id)
+                ->latest()
+                ->limit(20)
+                ->get(['id', 'title', 'content_type', 'platform', 'status', 'scheduled_at']);
+        }
+
+        $approvals = [];
+        if ($request->user()->can('client_approvals.view')) {
+            $approvals = \App\Models\ClientApproval::query()
+                ->where('client_id', $client->id)
+                ->with('contentItem:id,title')
+                ->latest('requested_at')
+                ->limit(20)
+                ->get(['id', 'content_item_id', 'status', 'requested_at', 'feedback']);
+        }
+
+        $tasks = [];
+        if ($request->user()->can('tasks.view')) {
+            $tasks = \App\Models\Task::query()
+                ->where('client_id', $client->id)
+                ->latest()
+                ->limit(20)
+                ->get(['id', 'title', 'status', 'priority', 'due_date']);
+        }
+
+        $invoices = [];
+        if ($request->user()->can('invoices.view')) {
+            $invoices = \App\Models\Invoice::query()
+                ->where('client_id', $client->id)
+                ->latest()
+                ->limit(20)
+                ->get(['id', 'invoice_number', 'status', 'issue_date', 'grand_total', 'balance_due', 'currency']);
+        }
+
+        $reports = [];
+        if ($request->user()->can('client_reports.view')) {
+            $reports = \App\Models\ClientPerformanceReport::query()
+                ->where('client_id', $client->id)
+                ->latest()
+                ->limit(20)
+                ->get(['id', 'title', 'report_number', 'status', 'period_start', 'period_end']);
+        }
+
+        $credentials = [];
+        if ($request->user()->can('integrations.view')) {
+            $credentials = \App\Models\IntegrationConnection::query()
+                ->where('client_id', $client->id)
+                ->latest()
+                ->get(['id', 'provider', 'name', 'status', 'health_status', 'health_message', 'is_enabled']);
+        }
+
+        $canManagePortalUsers = $request->user()->can('update', $client) && $request->user()->can('portal_settings.edit');
+        $portalUsers = [];
+        if ($canManagePortalUsers || $request->user()->can('portal_settings.view')) {
+            $portalUsers = $client->portalUsers()
+                ->role('client')
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'phone', 'job_title', 'is_active', 'last_seen_at', ...\App\Http\Controllers\ClientPortalUserController::FLAGS]);
+        }
+
         return Inertia::render('Clients/Show', [
             'client' => $client,
+            'portalUsers' => $portalUsers,
             'activities' => $activities,
             'folders' => ClientFile::FOLDERS,
             'statuses' => Client::STATUSES,
@@ -127,6 +191,12 @@ class ClientController extends Controller
             'communications' => $communications,
             'clientRequests' => $clientRequests,
             'portalSettings' => $portalSettings,
+            'contentItems' => $contentItems,
+            'approvals' => $approvals,
+            'tasks' => $tasks,
+            'invoices' => $invoices,
+            'reports' => $reports,
+            'credentials' => $credentials,
             'communicationTypes' => config('agency.communication_types'),
             'can' => [
                 'update' => $request->user()->can('update', $client),
@@ -137,6 +207,13 @@ class ClientController extends Controller
                 'create_campaign' => $request->user()->can('campaigns.create') || $request->user()->can('campaigns.manage'),
                 'log_communication' => $request->user()->can('communications.create'),
                 'edit_portal_settings' => $request->user()->can('portal_settings.edit'),
+                'view_content' => $request->user()->can('content.view'),
+                'view_approvals' => $request->user()->can('client_approvals.view'),
+                'view_tasks' => $request->user()->can('tasks.view'),
+                'view_invoices' => $request->user()->can('invoices.view'),
+                'view_reports' => $request->user()->can('client_reports.view'),
+                'view_credentials' => $request->user()->can('integrations.view'),
+                'manage_portal_users' => $canManagePortalUsers,
             ],
         ]);
     }

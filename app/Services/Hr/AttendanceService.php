@@ -2,9 +2,11 @@
 
 namespace App\Services\Hr;
 
+use App\Models\AttendanceCorrection;
 use App\Models\AttendanceDay;
 use App\Models\AttendancePunch;
 use App\Models\CompanyHoliday;
+use App\Models\DepartmentShiftAssignment;
 use App\Models\Employee;
 use App\Models\EmployeeShiftAssignment;
 use App\Models\User;
@@ -112,17 +114,22 @@ class AttendanceService
                 ->orderBy('punched_at')
                 ->get();
 
-            $holiday = CompanyHoliday::query()
-                ->where('company_id', $employee->company_id)
-                ->whereDate('date', $workDate)
-                ->where(function ($q) use ($employee) {
-                    $q->whereNull('branch_id')->orWhere('branch_id', $employee->branch_id);
-                })
-                ->exists();
+            $holiday = $this->holidayApplies($employee, $workDate);
+            $weeklyOff = $this->isWeeklyOff($shift, $workDate);
 
-            $worked = $this->computeWorkedMinutes($punches);
+            $elapsed = $this->computeWorkedMinutes($punches);
+            $unpaid = $punches->isEmpty() ? 0 : (int) ($shift?->unpaidBreakMinutes() ?? 0);
+            $unpaid = min($unpaid, $elapsed);
+            $net = max(0, $elapsed - $unpaid);
             $missingCheckout = $this->hasOpenInterval($punches);
-            $status = $this->classifyStatus($worked, $shift, $holiday, $punches->isEmpty(), $missingCheckout);
+            $lateMinutes = $this->lateMinutes($punches, $shift, $workDate);
+            $earlyMinutes = $this->earlyMinutes($punches, $shift, $workDate);
+            $status = $this->classifyStatus($net, $shift, $holiday, $weeklyOff, $punches->isEmpty(), $missingCheckout, $lateMinutes);
+            $full = (int) ($shift?->full_day_minutes ?? config('hrms.default_attendance_rules.full_day_minutes'));
+            $overtime = 0;
+            if ($shift?->overtime_eligible && ! $missingCheckout && $net > $full) {
+                $overtime = $net - $full;
+            }
 
             $attrs = [
                 'company_id' => $employee->company_id,
@@ -130,15 +137,24 @@ class AttendanceService
                 'status' => $day?->leave_request_id
                     ? ($day->status === 'unpaid_leave' ? 'unpaid_leave' : 'paid_leave')
                     : $status,
-                'worked_minutes' => $worked,
-                'break_minutes' => (int) ($shift?->break_minutes ?? 0),
+                'worked_minutes' => $elapsed,
+                'scheduled_minutes' => (int) ($shift?->scheduledElapsedMinutes() ?? 0),
+                'elapsed_minutes' => $elapsed,
+                'break_minutes' => $unpaid,
+                'unpaid_break_minutes' => $unpaid,
+                'net_minutes' => $net,
+                'overtime_minutes' => $overtime,
                 'missing_checkout' => $missingCheckout,
-                'is_late' => $this->isLate($punches, $shift, $workDate),
-                'is_early_departure' => $this->isEarlyDeparture($punches, $shift, $workDate),
+                'is_late' => $lateMinutes > 0,
+                'late_minutes' => $lateMinutes,
+                'is_early_departure' => $earlyMinutes > 0,
+                'early_minutes' => $earlyMinutes,
                 'working_arrangement' => $punches->last()?->working_arrangement,
                 'source_snapshot' => [
                     'punch_ids' => $punches->pluck('id')->all(),
                     'rules' => config('hrms.default_attendance_rules'),
+                    'unpaid_break_minutes' => $unpaid,
+                    'half_day_rule' => $shift?->half_day_rule ?: 'hours',
                 ],
                 'derived_at' => now(),
             ];
@@ -168,9 +184,8 @@ class AttendanceService
         if ($shift && ($shift->is_overnight || $shift->shift_type === 'overnight') && $shift->start_time && $shift->end_time) {
             $local = $at->copy();
             $start = Carbon::parse($local->toDateString().' '.$shift->start_time, $local->timezone);
-            // Overnight: punches before end_time and before noon belong to previous start day
-            $endSameDay = Carbon::parse($local->toDateString().' '.$shift->end_time, $local->timezone);
-            if ($local->lt($endSameDay) && $local->lt($start)) {
+            // Morning punches, including overtime after the shift end, belong to the shift that started the previous evening.
+            if ($local->lt($start) && $local->hour < 12) {
                 return $local->copy()->subDay()->toDateString();
             }
         }
@@ -178,7 +193,7 @@ class AttendanceService
         return $at->toDateString();
     }
 
-    protected function shiftFor(Employee $employee, string $date): ?WorkShift
+    public function shiftFor(Employee $employee, string $date): ?WorkShift
     {
         $assignment = EmployeeShiftAssignment::query()
             ->where('employee_id', $employee->id)
@@ -191,6 +206,20 @@ class AttendanceService
 
         if ($assignment) {
             return $assignment->shift;
+        }
+
+        if ($employee->department_id) {
+            $departmentAssignment = DepartmentShiftAssignment::query()
+                ->where('department_id', $employee->department_id)
+                ->where('effective_from', '<=', $date)
+                ->where(function ($q) use ($date) {
+                    $q->whereNull('effective_to')->orWhere('effective_to', '>=', $date);
+                })
+                ->latest('effective_from')
+                ->first();
+            if ($departmentAssignment?->shift) {
+                return $departmentAssignment->shift;
+            }
         }
 
         return WorkShift::query()
@@ -273,61 +302,141 @@ class AttendanceService
         return $open;
     }
 
-    protected function classifyStatus(int $worked, ?WorkShift $shift, bool $holiday, bool $empty, bool $missingCheckout): string
+    protected function classifyStatus(int $net, ?WorkShift $shift, bool $holiday, bool $weeklyOff, bool $empty, bool $missingCheckout, int $lateMinutes): string
     {
         if ($holiday && $empty) {
             return 'holiday';
         }
+        if ($weeklyOff && $empty) {
+            return 'weekly_off';
+        }
         if ($empty) {
             return 'absent';
+        }
+        if ($missingCheckout) {
+            return 'exception';
         }
 
         $full = (int) ($shift?->full_day_minutes ?? config('hrms.default_attendance_rules.full_day_minutes'));
         $half = (int) ($shift?->half_day_minutes ?? config('hrms.default_attendance_rules.half_day_minutes'));
+        $rule = $shift?->half_day_rule ?: 'hours';
 
-        if ($missingCheckout) {
-            return 'exception';
-        }
-        if ($worked >= $full) {
-            return 'present_full';
-        }
-        if ($worked >= $half) {
-            return 'present_half';
-        }
-        if ($worked > 0) {
-            return 'exception';
+        $status = 'absent';
+        if ($net >= $full) {
+            $status = 'present_full';
+        } elseif ($net >= $half) {
+            $status = 'present_half';
         }
 
-        return 'absent';
+        $cutoff = $shift?->late_half_day_cutoff_minutes;
+        if (in_array($rule, ['arrival', 'both'], true) && $cutoff !== null && $lateMinutes > (int) $cutoff && $status === 'present_full') {
+            $status = 'present_half';
+        }
+
+        return $status;
     }
 
-    protected function isLate($punches, ?WorkShift $shift, string $workDate): bool
+    protected function holidayApplies(Employee $employee, string $workDate): bool
+    {
+        return CompanyHoliday::query()
+            ->where('company_id', $employee->company_id)
+            ->whereDate('date', $workDate)
+            ->where('is_active', true)
+            ->where(function ($q) use ($employee) {
+                $q->whereNull('branch_id')->orWhere('branch_id', $employee->branch_id);
+            })
+            ->where(function ($q) use ($employee) {
+                $q->whereNull('department_id')->orWhere('department_id', $employee->department_id);
+            })
+            ->exists();
+    }
+
+    protected function isWeeklyOff(?WorkShift $shift, string $workDate): bool
+    {
+        $days = $shift?->weekly_off_days;
+        if (! is_array($days) || $days === []) {
+            return false;
+        }
+
+        return in_array(Carbon::parse($workDate)->dayOfWeek, array_map('intval', $days), true);
+    }
+
+    protected function lateMinutes($punches, ?WorkShift $shift, string $workDate): int
     {
         if (! $shift?->start_time) {
-            return false;
+            return 0;
         }
         $firstIn = $punches->firstWhere('punch_type', 'check_in');
         if (! $firstIn) {
-            return false;
+            return 0;
         }
         $tz = $shift->timezone ?: config('hrms.default_attendance_rules.timezone');
         $expected = Carbon::parse($workDate.' '.$shift->start_time, $tz)->addMinutes((int) $shift->grace_minutes);
+        $actual = Carbon::parse($firstIn->punched_at)->timezone($tz);
+        if ($actual->lte($expected)) {
+            return 0;
+        }
 
-        return Carbon::parse($firstIn->punched_at)->gt($expected);
+        return $expected->diffInMinutes($actual);
     }
 
-    protected function isEarlyDeparture($punches, ?WorkShift $shift, string $workDate): bool
+    protected function earlyMinutes($punches, ?WorkShift $shift, string $workDate): int
     {
-        if (! $shift?->end_time || $shift->is_overnight) {
-            return false;
+        if (! $shift?->end_time || $shift->is_overnight || $shift->shift_type === 'overnight') {
+            return 0;
         }
         $lastOut = $punches->where('punch_type', 'check_out')->last();
         if (! $lastOut) {
-            return false;
+            return 0;
         }
         $tz = $shift->timezone ?: config('hrms.default_attendance_rules.timezone');
         $expected = Carbon::parse($workDate.' '.$shift->end_time, $tz);
+        $actual = Carbon::parse($lastOut->punched_at)->timezone($tz);
+        if ($actual->gte($expected)) {
+            return 0;
+        }
 
-        return Carbon::parse($lastOut->punched_at)->lt($expected);
+        return $actual->diffInMinutes($expected);
+    }
+
+    public function correct(AttendanceDay $day, User $actor, string $reason, ?string $status = null): AttendanceCorrection
+    {
+        return DB::transaction(function () use ($day, $actor, $reason, $status) {
+            $day = AttendanceDay::query()->whereKey($day->id)->lockForUpdate()->firstOrFail();
+            if ($day->is_locked) {
+                throw ValidationException::withMessages(['work_date' => 'Locked attendance cannot be corrected.']);
+            }
+            if (trim($reason) === '') {
+                throw ValidationException::withMessages(['reason' => 'A correction reason is required.']);
+            }
+
+            $correction = AttendanceCorrection::create([
+                'company_id' => $day->company_id,
+                'employee_id' => $day->employee_id,
+                'work_date' => $day->work_date->toDateString(),
+                'reason' => $reason,
+                'proposed_punches' => ['status' => $status, 'attendance_day_id' => $day->id],
+                'status' => 'applied',
+                'reviewed_by' => $actor->id,
+                'reviewed_at' => now(),
+            ]);
+
+            if ($status) {
+                $day->update([
+                    'status' => $status,
+                    'source_snapshot' => array_merge($day->source_snapshot ?? [], [
+                        'correction_id' => $correction->id,
+                        'corrected_status' => $status,
+                    ]),
+                ]);
+            }
+
+            $this->activityLogger->log('attendance_corrected', 'hr', $day, null, [
+                'reason' => $reason,
+                'status' => $status,
+            ]);
+
+            return $correction;
+        });
     }
 }

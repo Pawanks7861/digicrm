@@ -136,7 +136,7 @@ class HrFoundationTest extends TestCase
             'company_id' => $this->company->id,
             'employee_id' => $employee->id,
             'work_shift_id' => $overnight->id,
-            'effective_from' => now()->subDay()->toDateString(),
+            'effective_from' => '2026-10-01',
         ]);
 
         $service = app(AttendanceService::class);

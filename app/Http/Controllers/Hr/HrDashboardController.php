@@ -8,6 +8,8 @@ use App\Models\AttendanceDay;
 use App\Models\Employee;
 use App\Models\ExpenseClaim;
 use App\Models\LeaveRequest;
+use App\Models\OvertimeEntry;
+use App\Models\PayrollItem;
 use App\Models\PayrollRun;
 use App\Services\Hr\CompanyOrganizationService;
 use Illuminate\Http\Request;
@@ -53,6 +55,17 @@ class HrDashboardController extends Controller
                 ->whereBetween('work_date', [now()->startOfMonth()->toDateString(), now()->toDateString()])
                 ->count(),
             'headcount' => Employee::where('company_id', $company->id)->whereIn('employment_status', ['active', 'probation', 'on_notice'])->count(),
+            'present_today' => AttendanceDay::where('company_id', $company->id)->whereDate('work_date', now()->toDateString())->whereIn('status', ['present_full', 'present_half'])->count(),
+            'absent_today' => AttendanceDay::where('company_id', $company->id)->whereDate('work_date', now()->toDateString())->where('status', 'absent')->count(),
+            'on_leave_today' => AttendanceDay::where('company_id', $company->id)->whereDate('work_date', now()->toDateString())->whereIn('status', ['paid_leave', 'unpaid_leave'])->count(),
+            'late_today' => AttendanceDay::where('company_id', $company->id)->whereDate('work_date', now()->toDateString())->where('is_late', true)->count(),
+            'missing_checkout' => AttendanceDay::where('company_id', $company->id)->whereDate('work_date', now()->toDateString())->where('missing_checkout', true)->count(),
+            'pending_overtime' => OvertimeEntry::where('company_id', $company->id)->whereIn('status', ['pending', 'submitted'])->count(),
+            'payroll_total' => (string) PayrollItem::query()
+                ->where('company_id', $company->id)
+                ->where('payment_status', '!=', 'blocked')
+                ->whereHas('run', fn ($q) => $q->where('period_year', now()->year)->where('period_month', now()->month))
+                ->sum('net_pay'),
             'pending_expenses' => ExpenseClaim::where('company_id', $company->id)->whereIn('status', ['submitted', 'approved'])->count(),
             'payroll_readiness' => $this->payrollReadiness($company->id),
         ];

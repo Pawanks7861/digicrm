@@ -28,7 +28,7 @@ class InvoiceController extends Controller
     {
         abort_unless($request->user()->can('invoices.view') || $request->user()->hasRole('super_admin'), 403);
         $q = Invoice::with('client:id,company_name')->latest();
-        if ($request->user()->isAccountManager() && ! $request->user()->hasRole('super_admin') && ! $request->user()->can('clients.view_all')) {
+        if ($this->mustScopeToAssignedClients($request)) {
             $q->whereHas('client', fn ($c) => $c->where('account_manager_id', $request->user()->id));
         }
         if ($request->filled('status')) {
@@ -53,7 +53,7 @@ class InvoiceController extends Controller
         abort_unless($request->user()->can('invoices.create') || $request->user()->hasRole('super_admin'), 403);
 
         return Inertia::render('Finance/Invoices/Form', [
-            'clients' => Client::orderBy('company_name')->get(['id', 'company_name', 'state', 'billing_state']),
+            'clients' => $this->clientsFor($request),
             'taxRates' => TaxRate::active()->orderBy('name')->get(),
             'invoice' => null,
         ]);
@@ -64,6 +64,7 @@ class InvoiceController extends Controller
         abort_unless($request->user()->can('invoices.create') || $request->user()->hasRole('super_admin'), 403);
         $data = $this->validated($request);
         $client = Client::findOrFail($data['client_id']);
+        $this->assertClientAccess($request, $client);
         $invoice = $this->invoices->create($client, $data, $request->user());
 
         return redirect()->route('invoices.show', $invoice)->with('success', 'Invoice created.');
@@ -72,6 +73,7 @@ class InvoiceController extends Controller
     public function show(Request $request, Invoice $invoice): Response
     {
         abort_unless($request->user()->can('invoices.view') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
 
         return Inertia::render('Finance/Invoices/Show', [
             'invoice' => $invoice->load(['client', 'items', 'validPayments.receiver:id,name']),
@@ -87,10 +89,11 @@ class InvoiceController extends Controller
     public function edit(Request $request, Invoice $invoice): Response
     {
         abort_unless($request->user()->can('invoices.edit') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
         abort_unless($invoice->isEditable(), 422);
 
         return Inertia::render('Finance/Invoices/Form', [
-            'clients' => Client::orderBy('company_name')->get(['id', 'company_name', 'state', 'billing_state']),
+            'clients' => $this->clientsFor($request),
             'taxRates' => TaxRate::active()->orderBy('name')->get(),
             'invoice' => $invoice->load('items'),
         ]);
@@ -99,6 +102,7 @@ class InvoiceController extends Controller
     public function update(Request $request, Invoice $invoice): RedirectResponse
     {
         abort_unless($request->user()->can('invoices.edit') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
         $this->invoices->update($invoice, $this->validated($request), $request->user());
 
         return redirect()->route('invoices.show', $invoice)->with('success', 'Invoice updated.');
@@ -107,6 +111,7 @@ class InvoiceController extends Controller
     public function send(Request $request, Invoice $invoice): RedirectResponse
     {
         abort_unless($request->user()->can('invoices.send') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
         $this->invoices->send($invoice, $request->user());
 
         return back()->with('success', 'Invoice sent.');
@@ -115,6 +120,7 @@ class InvoiceController extends Controller
     public function cancel(Request $request, Invoice $invoice): RedirectResponse
     {
         abort_unless($request->user()->can('invoices.cancel') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
         $this->invoices->cancel($invoice, $request->user());
 
         return back()->with('success', 'Invoice cancelled.');
@@ -123,6 +129,7 @@ class InvoiceController extends Controller
     public function fromPackage(Request $request, ClientPackage $clientPackage): RedirectResponse
     {
         abort_unless($request->user()->can('invoices.create') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $clientPackage->client);
         $invoice = $this->invoices->createFromPackage($clientPackage, $request->user(), $request->only(['period_label', 'tax_treatment']));
 
         return redirect()->route('invoices.show', $invoice)->with('success', 'Package invoice created.');
@@ -131,6 +138,7 @@ class InvoiceController extends Controller
     public function addOverage(Request $request, Invoice $invoice, PackageOverage $overage): RedirectResponse
     {
         abort_unless($request->user()->can('invoices.edit') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
         $this->invoices->addOverage($invoice, $overage, $request->user());
 
         return back()->with('success', 'Overage added to invoice.');
@@ -139,8 +147,35 @@ class InvoiceController extends Controller
     public function pdf(Request $request, Invoice $invoice): HttpResponse
     {
         abort_unless($request->user()->can('invoices.view') || $request->user()->hasRole('super_admin'), 403);
+        $this->assertClientAccess($request, $invoice->client);
 
         return $this->pdfs->invoice($invoice);
+    }
+
+    protected function clientsFor(Request $request)
+    {
+        $q = Client::orderBy('company_name');
+        if ($this->mustScopeToAssignedClients($request)) {
+            $q->where('account_manager_id', $request->user()->id);
+        }
+
+        return $q->get(['id', 'company_name', 'state', 'billing_state']);
+    }
+
+    protected function mustScopeToAssignedClients(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user->isAccountManager()
+            && ! $user->hasRole('super_admin')
+            && ! $user->can('clients.view_all');
+    }
+
+    protected function assertClientAccess(Request $request, Client $client): void
+    {
+        if ($this->mustScopeToAssignedClients($request)) {
+            abort_unless((int) $client->account_manager_id === (int) $request->user()->id, 403);
+        }
     }
 
     protected function validated(Request $request): array

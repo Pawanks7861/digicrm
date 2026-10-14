@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import HrNav from '@/Components/Hr/HrNav.vue';
 import NavIcon from '@/Components/Shell/NavIcon.vue';
 import { Bell, Search } from 'lucide-vue-next';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -11,106 +12,7 @@ const moreOpen = ref(false);
 const page = usePage();
 
 const flashSuccess = computed(() => page.props.flash?.success);
-const canClients = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('clients.view') || perms.includes('clients.view_all');
-});
-const canPackages = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('packages.view') || perms.includes('packages.manage') || perms.includes('packages.create');
-});
-const canCampaigns = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('campaigns.view') || perms.includes('campaigns.view_all') || perms.includes('campaigns.manage') || perms.includes('campaigns.create');
-});
-const canTasks = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('tasks.view') || perms.includes('tasks.view_all') || perms.includes('tasks.view_assigned') || perms.includes('tasks.manage');
-});
-const canReviews = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('internal_reviews.view') || perms.includes('internal_reviews.approve');
-});
-const canContent = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('content.view') || perms.includes('content.view_all') || perms.includes('content.manage') || perms.includes('content.create');
-});
-const canCalendar = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('content_calendar.view') || canContent.value;
-});
-const canRequests = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('client_requests.view') || perms.includes('client_requests.view_all') || perms.includes('client_requests.review');
-});
-const canFollowUps = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('followups.view') || perms.includes('followups.view_all');
-});
-const canTime = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('timesheets.view_own') || perms.includes('timesheets.view_all') || perms.includes('time_entries.view_own') || perms.includes('time_entries.create');
-});
-const canWorkload = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('workload.view');
-});
-const canDelays = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('delays.view');
-});
-const canReports = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('reports.operational') || perms.includes('reports.financial') || perms.includes('profitability.view') || perms.includes('reports.view');
-});
-const canFinance = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('quotations.view') || perms.includes('invoices.view') || perms.includes('payments.view') || perms.includes('receivables.view');
-});
-const canNotificationSettings = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('notification_settings.view') || perms.includes('notification_settings.manage') || perms.includes('email_settings.manage');
-});
-const canIntegrations = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('integrations.view') || perms.includes('integrations.manage');
-});
-const canAutomations = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('automations.view');
-});
-const canPerformance = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('performance.view') || perms.includes('client_reports.view');
-});
-const canLeads = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('leads.view') || perms.includes('leads.view_all');
-});
-const canPipeline = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('opportunities.view');
-});
-const canChat = computed(() => (page.props.auth?.user?.permissions || []).includes('chat.use') || (page.props.auth?.user?.roles || []).includes('super_admin'));
-const canSettings = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    const roles = page.props.auth?.user?.roles || [];
-    return roles.includes('super_admin')
-        || perms.includes('users.manage')
-        || perms.includes('users.view')
-        || perms.includes('audit_logs.view')
-        || perms.includes('company_settings.view')
-        || perms.includes('company_settings.manage')
-        || perms.includes('company_branding.manage');
-});
-const canHr = computed(() => {
-    const perms = page.props.auth?.user?.permissions || [];
-    return perms.includes('hr.dashboard.view')
-        || perms.includes('hr.employees.view_own')
-        || perms.includes('hr.employees.view_all')
-        || perms.includes('hr.attendance.view_own')
-        || (page.props.auth?.user?.roles || []).includes('super_admin');
-});
+const canSettings = computed(() => (page.props.navMenus || []).some((item) => item.key === 'settings'));
 const brand = computed(() => page.props.branding || {});
 
 const activeTimer = computed(() => page.props.activeTimer);
@@ -123,85 +25,19 @@ const elapsedLabel = computed(() => {
 });
 
 const nav = computed(() => {
-    const items = [
-        { name: 'Dashboard', icon: 'dashboard', href: route('dashboard'), current: route().current('dashboard') },
-    ];
-    if (canChat.value) {
-        items.push({
-            name: 'Chat',
-            icon: 'chat',
-            href: route('chat.index'),
-            current: route().current('chat.*'),
-            badge: page.props.unreadChats || 0,
-        });
-    }
-    if (canClients.value) {
-        items.push({ name: 'Clients', icon: 'clients', href: route('clients.index'), current: route().current('clients.*') });
-    }
-    if (canLeads.value) {
-        items.push({ name: 'Leads', icon: 'leads', href: route('leads.index'), current: route().current('leads.*') });
-    }
-    if (canPipeline.value) {
-        items.push({ name: 'Pipeline', icon: 'pipeline', href: route('pipeline.index'), current: route().current('pipeline.*') || route().current('opportunities.*') });
-    }
-    if (canCampaigns.value) {
-        items.push({ name: 'Campaigns', icon: 'campaigns', href: route('campaigns.index'), current: route().current('campaigns.*') || route().current('deliverables.*') });
-    }
-    if (canRequests.value) {
-        items.push({ name: 'Requests', icon: 'requests', href: route('requests.index'), current: route().current('requests.*') });
-    }
-    if (canContent.value) {
-        items.push({ name: 'Content', icon: 'content', href: route('content.index'), current: route().current('content.*') });
-    }
-    if (canCalendar.value) {
-        items.push({ name: 'Calendar', icon: 'calendar', href: route('calendar.index'), current: route().current('calendar.*') });
-    }
-    if (canTasks.value) {
-        items.push({ name: 'Tasks', icon: 'tasks', href: route('tasks.index'), current: route().current('tasks.*') });
-    }
-    if (canHr.value) {
-        items.push({ name: 'HR', icon: 'workload', href: route('hr.dashboard'), current: route().current('hr.*') });
-    }
-    if (canFollowUps.value) {
-        items.push({ name: 'Follow-ups', icon: 'followups', href: route('follow-ups.index'), current: route().current('follow-ups.*') });
-    }
-    if (canTime.value) {
-        items.push({ name: 'Time', icon: 'time', href: route('timesheet.index'), current: route().current('timesheet.*') || route().current('time-entries.*') || route().current('timesheets.*') });
-    }
-    if (canWorkload.value) {
-        items.push({ name: 'Workload', icon: 'workload', href: route('workload.index'), current: route().current('workload.*') || route().current('utilization.*') || route().current('capacity.*') });
-    }
-    if (canDelays.value) {
-        items.push({ name: 'Delays', icon: 'delays', href: route('delays.index'), current: route().current('delays.*') });
-    }
-    if (canReports.value) {
-        items.push({ name: 'Reports', icon: 'reports', href: route('reports.index'), current: route().current('reports.*') || route().current('cost-rates.*') });
-    }
-    if (canPerformance.value) {
-        items.push({ name: 'Performance', icon: 'performance', href: route('performance.index'), current: route().current('performance.*') || route().current('client-reports.*') });
-    }
-    if (canFinance.value) {
-        items.push({ name: 'Finance', icon: 'finance', href: route('quotations.index'), current: route().current('quotations.*') || route().current('invoices.*') || route().current('payments.*') || route().current('finance.*') });
-    }
-    if (canNotificationSettings.value) {
-        items.push({ name: 'Alerts', icon: 'alerts', href: route('settings.notifications.health'), current: route().current('settings.notifications.*') });
-    }
-    if (canIntegrations.value) {
-        items.push({ name: 'Integrations', icon: 'integrations', href: route('integrations.index'), current: route().current('integrations.*') });
-    }
-    if (canAutomations.value) {
-        items.push({ name: 'Automations', icon: 'automations', href: route('automations.index'), current: route().current('automations.*') || route().current('automation-runs.*') });
-    }
-    if (canReviews.value) {
-        items.push({ name: 'Reviews', icon: 'reviews', href: route('internal-reviews.index'), current: route().current('internal-reviews.*') });
-    }
-    if (canPackages.value) {
-        items.push({ name: 'Packages', icon: 'packages', href: route('service-packages.index'), current: route().current('service-packages.*') || route().current('client-packages.*') });
-    }
-    if (canSettings.value) {
-        items.push({ name: 'Settings', icon: 'settings', href: route('settings.index'), current: route().current('settings.*') });
-    }
-    return items;
+    let currentFound = false;
+    return (page.props.navMenus || []).map((item) => {
+        const matches = !currentFound && item.active.some((pattern) => route().current(pattern));
+        currentFound = currentFound || matches;
+        return {
+            key: item.key,
+            name: item.label,
+            icon: item.icon,
+            href: item.href,
+            current: matches,
+            badge: item.key === 'chat' ? page.props.unreadChats || 0 : 0,
+        };
+    });
 });
 
 const railItems = computed(() => nav.value.slice(0, 8));
@@ -321,6 +157,7 @@ const currentNav = computed(() => nav.value.find((item) => item.current));
                     {{ flashSuccess }}
                 </div>
                 <main class="flex-1 px-4 pb-6 sm:px-6">
+                    <HrNav v-if="route().current('hr.*')" />
                     <slot />
                 </main>
             </div>

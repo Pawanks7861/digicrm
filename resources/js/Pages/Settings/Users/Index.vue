@@ -31,7 +31,10 @@ function apply() {
                 <p class="text-sm text-mute">Settings</p>
                 <h1 class="text-2xl font-semibold tracking-tight">Users</h1>
             </div>
-            <Link v-if="canManage" :href="route('settings.users.create')" class="rounded-full bg-accent px-4 py-2 text-sm text-white">Add user</Link>
+            <div class="flex items-center gap-2">
+                <Link v-if="$page.props.auth.user.permissions.includes('roles.manage')" :href="route('settings.menu-access.index')" class="rounded-full bg-mist px-4 py-2 text-sm">Menu access by role</Link>
+                <Link v-if="canManage" :href="route('settings.users.create')" class="rounded-full bg-accent px-4 py-2 text-sm text-white">Add user</Link>
+            </div>
         </div>
 
         <form class="mb-4 flex flex-wrap gap-2" @submit.prevent="apply">
@@ -66,8 +69,11 @@ function apply() {
                         </td>
                         <td class="px-4 py-3 capitalize">{{ (user.role || '—').replaceAll('_', ' ') }}</td>
                         <td class="px-4 py-3">{{ user.is_active ? 'Active' : 'Inactive' }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <Link v-if="canManage && !user.is_client" :href="route('settings.users.edit', user.id)" class="text-accent">Edit</Link>
+                        <td class="whitespace-nowrap px-4 py-3 text-right">
+                            <template v-if="canManage && !user.is_client">
+                                <Link :href="route('settings.users.menus', user.id)" class="mr-4 text-mute hover:text-ink">Menus</Link>
+                                <Link :href="route('settings.users.edit', user.id)" class="text-accent">Edit</Link>
+                            </template>
                         </td>
                     </tr>
                     <tr v-if="!users.data.length">

@@ -33,6 +33,13 @@ class HandleInertiaRequests extends Middleware
                     'notification_sounds_enabled' => (bool) $user->notification_sounds_enabled,
                 ] : null,
             ],
+            'navMenus' => function () use ($user) {
+                if (! $user || $user->isClientUser()) {
+                    return [];
+                }
+
+                return app(\App\Services\MenuAccessService::class)->visibleMenus($user);
+            },
             'activeTimer' => function () use ($user) {
                 if (! $user || $user->isClientUser()) {
                     return null;

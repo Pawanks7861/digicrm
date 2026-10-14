@@ -12,7 +12,8 @@ class AttendanceDay extends Model
 
     protected $fillable = [
         'company_id', 'employee_id', 'work_date', 'work_shift_id', 'status', 'worked_minutes',
-        'break_minutes', 'overtime_minutes', 'is_late', 'is_early_departure', 'missing_checkout',
+        'scheduled_minutes', 'elapsed_minutes', 'break_minutes', 'unpaid_break_minutes', 'net_minutes',
+        'overtime_minutes', 'is_late', 'late_minutes', 'is_early_departure', 'early_minutes', 'missing_checkout',
         'is_locked', 'working_arrangement', 'leave_request_id', 'leave_fraction', 'source_snapshot', 'derived_at',
     ];
 

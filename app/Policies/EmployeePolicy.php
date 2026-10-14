@@ -45,6 +45,6 @@ class EmployeePolicy
 
     public function viewSalary(User $user, Employee $employee): bool
     {
-        return $user->can('hr.payroll.view') || $user->can('hr.salary.manage');
+        return $user->can('hr.payroll.view') || $user->can('hr.salary.manage') || $user->can('hr.salary.view');
     }
 }

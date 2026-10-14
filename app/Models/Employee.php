@@ -16,12 +16,16 @@ class Employee extends Model
     protected $fillable = [
         'company_id', 'user_id', 'employee_code', 'first_name', 'last_name', 'work_email', 'phone',
         'branch_id', 'department_id', 'designation_id', 'reporting_manager_id',
-        'joining_date', 'exit_date', 'employment_type', 'employment_status', 'timezone', 'meta',
+        'joining_date', 'exit_date', 'probation_start', 'probation_end', 'probation_status',
+        'confirmation_date', 'confirmation_status', 'employment_type', 'employment_status', 'timezone', 'meta',
     ];
 
     protected $casts = [
         'joining_date' => 'date',
         'exit_date' => 'date',
+        'probation_start' => 'date',
+        'probation_end' => 'date',
+        'confirmation_date' => 'date',
         'meta' => 'array',
     ];
 
@@ -75,6 +79,16 @@ class Employee extends Model
     public function leaveRequests(): HasMany
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function bankDetail(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EmployeeBankDetail::class);
+    }
+
+    public function statutoryProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EmployeeStatutoryProfile::class);
     }
 
     public function salaryAssignments(): HasMany

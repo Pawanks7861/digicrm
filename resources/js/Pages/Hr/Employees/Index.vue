@@ -29,7 +29,8 @@ const label = (v) => (v || '').replaceAll('_', ' ');
     <AuthenticatedLayout>
         <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Employees</h1>
+                <Link :href="route('hr.dashboard')" class="text-sm text-teal-700 hover:underline">← People & HR</Link>
+                <h1 class="mt-1 text-2xl font-semibold tracking-tight">Employees</h1>
                 <p class="mt-1 text-sm text-slate-500">Employment records linked to login identities where needed.</p>
             </div>
             <Link v-if="can.create" :href="route('hr.employees.create')" class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white">Add employee</Link>

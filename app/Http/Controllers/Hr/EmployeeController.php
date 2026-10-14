@@ -70,6 +70,11 @@ class EmployeeController extends Controller
             'reporting_manager_id' => ['nullable', 'exists:employees,id'],
             'joining_date' => ['nullable', 'date'],
             'exit_date' => ['nullable', 'date', 'after_or_equal:joining_date'],
+            'probation_start' => ['nullable', 'date'],
+            'probation_end' => ['nullable', 'date'],
+            'probation_status' => ['nullable', 'string', 'max:32'],
+            'confirmation_date' => ['nullable', 'date'],
+            'confirmation_status' => ['nullable', 'string', 'max:32'],
             'employment_type' => ['required', 'in:'.implode(',', config('hrms.employment_types'))],
             'employment_status' => ['required', 'in:'.implode(',', config('hrms.employment_statuses'))],
         ]);
@@ -87,13 +92,29 @@ class EmployeeController extends Controller
             'branch:id,name', 'department:id,name', 'designation:id,name',
             'reportingManager:id,first_name,last_name,employee_code',
             'user:id,name,email',
+            'leaveRequests' => fn ($q) => $q->latest('start_date')->limit(12),
+            'leaveRequests.leaveType:id,name,code,is_paid',
         ]);
+        $canSalary = $request->user()->can('viewSalary', $employee);
+        $canStatutory = $request->user()->can('hr.salary.manage') || $request->user()->can('hr.payroll.view') || $request->user()->isSuperAdmin();
 
         return Inertia::render('Hr/Employees/Show', [
             'employee' => $employee,
+            'shiftHistory' => \App\Models\EmployeeShiftAssignment::query()->where('employee_id', $employee->id)->with('shift:id,name,code')->orderByDesc('effective_from')->get(),
+            'salaryHistory' => $canSalary
+                ? $employee->salaryAssignments()->with('structure:id,name')->orderByDesc('effective_from')->get()
+                : [],
+            'attendanceSummary' => \App\Models\AttendanceDay::query()
+                ->where('employee_id', $employee->id)
+                ->whereDate('work_date', '>=', now()->startOfMonth()->toDateString())
+                ->selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
+            'bank' => $canStatutory ? $employee->bankDetail : null,
+            'statutory' => $canStatutory ? $employee->statutoryProfile : null,
             'can' => [
                 'update' => $request->user()->can('update', $employee),
-                'view_salary' => $request->user()->can('viewSalary', $employee),
+                'view_salary' => $canSalary,
             ],
         ]);
     }
@@ -124,6 +145,11 @@ class EmployeeController extends Controller
             'reporting_manager_id' => ['nullable', 'exists:employees,id'],
             'joining_date' => ['nullable', 'date'],
             'exit_date' => ['nullable', 'date', 'after_or_equal:joining_date'],
+            'probation_start' => ['nullable', 'date'],
+            'probation_end' => ['nullable', 'date'],
+            'probation_status' => ['nullable', 'string', 'max:32'],
+            'confirmation_date' => ['nullable', 'date'],
+            'confirmation_status' => ['nullable', 'string', 'max:32'],
             'employment_type' => ['required', 'in:'.implode(',', config('hrms.employment_types'))],
             'employment_status' => ['required', 'in:'.implode(',', config('hrms.employment_statuses'))],
         ]);

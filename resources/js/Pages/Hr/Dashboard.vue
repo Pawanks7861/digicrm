@@ -1,6 +1,15 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { formatHours } from '@/utils/hours';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const page = usePage();
+const canPayroll = computed(() => {
+    const perms = page.props.auth?.user?.permissions || [];
+    const roles = page.props.auth?.user?.roles || [];
+    return roles.includes('super_admin') || perms.includes('hr.payroll.view');
+});
 
 defineProps({
     role_view: String,
@@ -12,6 +21,13 @@ defineProps({
     headcount: Number,
     pending_expenses: Number,
     payroll_readiness: Object,
+    present_today: Number,
+    absent_today: Number,
+    on_leave_today: Number,
+    late_today: Number,
+    missing_checkout: Number,
+    pending_overtime: Number,
+    payroll_total: [String, Number],
 });
 
 const label = (v) => (v || '—').toString().replaceAll('_', ' ');
@@ -29,6 +45,7 @@ const label = (v) => (v || '—').toString().replaceAll('_', ' ');
                 <Link :href="route('hr.attendance.index')" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50">Attendance</Link>
                 <Link :href="route('hr.leave.index')" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50">Leave</Link>
                 <Link :href="route('hr.employees.index')" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50">Employees</Link>
+                <Link v-if="canPayroll" :href="route('hr.payroll.index')" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50">Payroll</Link>
             </div>
         </div>
 
@@ -36,7 +53,7 @@ const label = (v) => (v || '—').toString().replaceAll('_', ' ');
             <div class="rounded-2xl border border-slate-200 bg-white p-4">
                 <div class="text-xs uppercase tracking-wide text-slate-400">Today</div>
                 <div class="mt-2 text-lg font-semibold capitalize">{{ label(today?.status) }}</div>
-                <div class="mt-1 text-xs text-slate-500">{{ today ? `${today.worked_minutes || 0} min worked` : 'No attendance yet' }}</div>
+                <div class="mt-1 text-xs text-slate-500">{{ today ? `${formatHours(Math.max(0, Number(today.net_minutes) || (Number(today.elapsed_minutes || today.worked_minutes || 0) - Number(today.unpaid_break_minutes || today.break_minutes || 0))))} net` : 'No attendance yet' }}</div>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-white p-4">
                 <div class="text-xs uppercase tracking-wide text-slate-400">Pending approvals</div>
@@ -49,6 +66,30 @@ const label = (v) => (v || '—').toString().replaceAll('_', ' ');
             <div class="rounded-2xl border border-slate-200 bg-white p-4">
                 <div class="text-xs uppercase tracking-wide text-slate-400">Headcount</div>
                 <div class="mt-2 text-2xl font-semibold">{{ headcount }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">Present today</div>
+                <div class="mt-2 text-2xl font-semibold">{{ present_today || 0 }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">Absent today</div>
+                <div class="mt-2 text-2xl font-semibold">{{ absent_today || 0 }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">On leave</div>
+                <div class="mt-2 text-2xl font-semibold">{{ on_leave_today || 0 }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">Late / open checkout</div>
+                <div class="mt-2 text-2xl font-semibold">{{ late_today || 0 }} / {{ missing_checkout || 0 }}</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">Overtime pending</div>
+                <div class="mt-2 text-2xl font-semibold">{{ pending_overtime || 0 }}</div>
+            </div>
+            <div v-if="canPayroll" class="rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-xs uppercase tracking-wide text-slate-400">Current payroll net</div>
+                <div class="mt-2 text-2xl font-semibold">₹{{ payroll_total || '0.00' }}</div>
             </div>
         </div>
 

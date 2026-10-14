@@ -39,6 +39,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\RecordAuditTrail::class,
+            \App\Http\Middleware\EnforceMenuAccess::class,
         ],
 
         'api' => [

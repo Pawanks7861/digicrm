@@ -22,6 +22,11 @@ class SettingsHubController extends Controller
                 'body' => 'Create accounts, assign roles, and deactivate access.',
                 'href' => route('settings.users.index'),
             ] : null,
+            $user->can('roles.manage') ? [
+                'title' => 'Menu access',
+                'body' => 'Choose which sidebar menus each role sees. Override per user from the Users list.',
+                'href' => route('settings.menu-access.index'),
+            ] : null,
             ($user->can('audit_logs.view') || $user->can('users.manage')) ? [
                 'title' => 'Audit log',
                 'body' => 'Sign-ins and what each person changed in the CRM.',

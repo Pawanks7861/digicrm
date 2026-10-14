@@ -109,6 +109,7 @@ class DemoShowcaseSeeder extends Seeder
         $this->step('people and time', fn () => $this->people($designer, $am, $glow, $campaign, $task, $super));
         $this->step('performance', fn () => $this->performance($glow, $campaign, $content, $super));
         $this->step('automation and alerts', fn () => $this->automation($super, $am));
+        $this->call(DemoClientTabSeeder::class);
     }
 
     protected function clientProfile(Client $glow, Client $abc, User $am, User $super): void
@@ -124,8 +125,8 @@ class DemoShowcaseSeeder extends Seeder
                 'brand_description' => 'A neighbourhood beauty studio known for festive makeup and bridal trials.',
                 'target_audience' => 'Women 22–40 in Mumbai who book looks for weddings and festivals.',
                 'tone_of_voice' => 'Warm, confident, and practical.',
-                'preferred_colors' => 'Gold, blush, black',
-                'hashtags' => '#GlowBeauty #FestiveLooks',
+                'preferred_colors' => ['Gold', 'Blush', 'Black'],
+                'hashtags' => ['#GlowBeauty', '#FestiveLooks'],
                 'dos' => 'Show real clients and the finished look.',
                 'donts' => 'No heavy filters or competitor product names.',
             ]

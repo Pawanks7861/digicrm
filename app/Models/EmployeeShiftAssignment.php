@@ -11,7 +11,7 @@ class EmployeeShiftAssignment extends Model
     use BelongsToCompany;
 
     protected $fillable = [
-        'company_id', 'employee_id', 'work_shift_id', 'effective_from', 'effective_to',
+        'company_id', 'employee_id', 'work_shift_id', 'effective_from', 'effective_to', 'assigned_by', 'notes',
     ];
 
     protected $casts = [

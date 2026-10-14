@@ -75,7 +75,8 @@ class HrAttendanceEdgeTest extends TestCase
 
         $day = AttendanceDay::where('employee_id', $employee->id)->whereDate('work_date', '2026-10-10')->first();
         $this->assertSame(480, (int) $day->worked_minutes);
-        $this->assertSame('present_full', $day->status);
+        $this->assertSame(420, (int) $day->net_minutes);
+        $this->assertSame('present_half', $day->status);
         $this->assertSame(4, $employee->punches()->count());
     }
 
@@ -85,17 +86,18 @@ class HrAttendanceEdgeTest extends TestCase
         $employee = $this->makeEmployee($user, ['employee_code' => 'THR1']);
         $svc = app(AttendanceService::class);
 
-        // Exactly half day (240)
+        // 5 hours elapsed minus the 60 minute unpaid break = 240 net minutes
         $svc->punch($employee, 'check_in', $user, ['punched_at' => '2026-10-08T09:30:00+05:30', 'idempotency_key' => 'h1']);
-        $svc->punch($employee, 'check_out', $user, ['punched_at' => '2026-10-08T13:30:00+05:30', 'idempotency_key' => 'h2']);
+        $svc->punch($employee, 'check_out', $user, ['punched_at' => '2026-10-08T14:30:00+05:30', 'idempotency_key' => 'h2']);
         $half = AttendanceDay::where('employee_id', $employee->id)->whereDate('work_date', '2026-10-08')->first();
+        $this->assertSame(240, (int) $half->net_minutes);
         $this->assertSame('present_half', $half->status);
 
-        // One minute below half (239) → exception
+        // Net minutes fall below the half-day threshold
         $svc->punch($employee, 'check_in', $user, ['punched_at' => '2026-10-09T09:30:00+05:30', 'idempotency_key' => 'b1']);
         $svc->punch($employee, 'check_out', $user, ['punched_at' => '2026-10-09T13:29:00+05:30', 'idempotency_key' => 'b2']);
         $below = AttendanceDay::where('employee_id', $employee->id)->whereDate('work_date', '2026-10-09')->first();
-        $this->assertSame('exception', $below->status);
+        $this->assertSame('absent', $below->status);
         $this->assertSame(239, (int) $below->worked_minutes);
     }
 

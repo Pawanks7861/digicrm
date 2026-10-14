@@ -79,7 +79,12 @@ class RolePermissionSeeder extends Seeder
             'hr.approvals.act_as_owner',
             'hr.documents.view_own', 'hr.documents.view_team', 'hr.documents.review', 'hr.documents.manage',
             'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve', 'hr.expenses.pay',
-            'hr.payroll.view', 'hr.payroll.manage', 'hr.salary.manage',
+            'hr.payroll.view', 'hr.payroll.manage', 'hr.payroll.approve', 'hr.payroll.lock',
+            'hr.salary.view', 'hr.salary.manage',
+            'hr.shifts.view', 'hr.shifts.manage',
+            'hr.holidays.view', 'hr.holidays.manage',
+            'hr.overtime.view', 'hr.overtime.request', 'hr.overtime.approve',
+            'hr.settings.manage',
             'hr.org.manage',
         ];
 
@@ -160,6 +165,7 @@ class RolePermissionSeeder extends Seeder
             'hr.leave.view_own', 'hr.leave.view_team', 'hr.leave.request', 'hr.leave.approve',
             'hr.documents.view_own', 'hr.documents.view_team',
             'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve',
+            'hr.shifts.view', 'hr.holidays.view', 'hr.overtime.view', 'hr.overtime.approve',
         ]);
 
         $manager->syncPermissions([
@@ -169,6 +175,7 @@ class RolePermissionSeeder extends Seeder
             'hr.leave.view_own', 'hr.leave.view_team', 'hr.leave.request', 'hr.leave.approve',
             'hr.documents.view_own', 'hr.documents.view_team',
             'hr.expenses.view_own', 'hr.expenses.view_team', 'hr.expenses.request', 'hr.expenses.approve',
+            'hr.shifts.view', 'hr.holidays.view', 'hr.overtime.view', 'hr.overtime.approve',
             'tasks.view', 'tasks.view_assigned', 'tasks.create', 'tasks.edit', 'tasks.assign',
             'notifications.view',
             'chat.use',
@@ -181,6 +188,7 @@ class RolePermissionSeeder extends Seeder
             'hr.leave.view_own', 'hr.leave.request',
             'hr.documents.view_own',
             'hr.expenses.view_own', 'hr.expenses.request',
+            'hr.shifts.view', 'hr.holidays.view', 'hr.overtime.request',
             'tasks.view', 'tasks.view_assigned',
             'notifications.view',
             'chat.use',
@@ -208,6 +216,7 @@ class RolePermissionSeeder extends Seeder
             'hr.leave.view_own', 'hr.leave.request',
             'hr.documents.view_own',
             'hr.expenses.view_own', 'hr.expenses.request',
+            'hr.shifts.view', 'hr.holidays.view', 'hr.overtime.request',
         ]);
 
         $client->syncPermissions([

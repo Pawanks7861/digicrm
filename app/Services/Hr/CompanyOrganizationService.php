@@ -63,8 +63,38 @@ class CompanyOrganizationService
                 'grace_minutes' => 10,
                 'timezone' => $company->timezone,
                 'is_active' => true,
+                'category' => 'general',
             ]
         );
+
+        foreach ([
+            ['MORN', 'Morning Shift', 'morning', '06:00:00', '14:00:00', false],
+            ['EVE', 'Evening Shift', 'evening', '14:00:00', '22:00:00', false],
+            ['NGT', 'Night Shift', 'night', '22:00:00', '06:00:00', true],
+        ] as [$code, $name, $category, $start, $end, $overnight]) {
+            WorkShift::firstOrCreate(
+                ['company_id' => $company->id, 'code' => $code],
+                [
+                    'name' => $name,
+                    'category' => $category,
+                    'shift_type' => $overnight ? 'overnight' : 'fixed',
+                    'start_time' => $start,
+                    'end_time' => $end,
+                    'break_minutes' => 45,
+                    'lunch_break_minutes' => 30,
+                    'tea_break_minutes' => 15,
+                    'is_overnight' => $overnight,
+                    'full_day_minutes' => 480,
+                    'half_day_minutes' => 240,
+                    'grace_minutes' => 10,
+                    'weekly_off_days' => [0],
+                    'overtime_eligible' => $category === 'night',
+                    'half_day_rule' => 'hours',
+                    'timezone' => $company->timezone,
+                    'is_active' => true,
+                ]
+            );
+        }
 
         HrPolicy::firstOrCreate(
             ['company_id' => $company->id, 'code' => 'ATT-DEFAULT'],
@@ -82,6 +112,10 @@ class CompanyOrganizationService
             ['EL', 'Earned Leave', true, 15],
             ['UL', 'Unpaid Leave', false, null],
             ['CO', 'Compensatory Off', true, null],
+            ['AL', 'Annual Leave', true, 15],
+            ['ML', 'Maternity Leave', true, null],
+            ['PT', 'Paternity Leave', true, null],
+            ['BL', 'Bereavement Leave', true, null],
         ];
         foreach ($leaveDefaults as [$code, $name, $paid, $alloc]) {
             LeaveType::firstOrCreate(

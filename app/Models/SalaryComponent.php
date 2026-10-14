@@ -12,13 +12,19 @@ class SalaryComponent extends Model
 
     protected $fillable = [
         'company_id', 'salary_structure_id', 'code', 'name', 'component_type', 'calc_type',
-        'amount', 'percentage', 'percentage_of', 'formula_key', 'is_taxable', 'sort_order',
+        'amount', 'percentage', 'percentage_of', 'formula_key', 'is_taxable', 'pf_applicable', 'esi_applicable',
+        'prorate', 'rounding', 'show_on_payslip', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'percentage' => 'decimal:4',
         'is_taxable' => 'boolean',
+        'pf_applicable' => 'boolean',
+        'esi_applicable' => 'boolean',
+        'prorate' => 'boolean',
+        'show_on_payslip' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public function structure(): BelongsTo

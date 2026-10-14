@@ -23,6 +23,13 @@ const props = defineProps({
     clientRequests: { type: Array, default: () => [] },
     portalSettings: { type: Object, default: null },
     communicationTypes: { type: Array, default: () => [] },
+    contentItems: { type: Array, default: () => [] },
+    approvals: { type: Array, default: () => [] },
+    tasks: { type: Array, default: () => [] },
+    invoices: { type: Array, default: () => [] },
+    reports: { type: Array, default: () => [] },
+    credentials: { type: Array, default: () => [] },
+    portalUsers: { type: Array, default: () => [] },
 });
 
 const activeTab = ref(props.tab || 'dashboard');
@@ -40,12 +47,12 @@ const tabs = [
     { id: 'social', label: 'Social' },
     { id: 'activity', label: 'Activity' },
     { id: 'notes', label: 'Notes' },
-    { id: 'content', label: 'Content', soon: true },
-    { id: 'approvals', label: 'Approvals', soon: true },
-    { id: 'tasks', label: 'Tasks', soon: true },
-    { id: 'invoices', label: 'Invoices', soon: true },
-    { id: 'reports', label: 'Reports', soon: true },
-    { id: 'credentials', label: 'Credentials', soon: true },
+    { id: 'content', label: 'Content' },
+    { id: 'approvals', label: 'Approvals' },
+    { id: 'tasks', label: 'Tasks' },
+    { id: 'invoices', label: 'Invoices' },
+    { id: 'reports', label: 'Reports' },
+    { id: 'credentials', label: 'Credentials' },
 ];
 
 const progress = computed(() => props.client.onboarding_progress || { completed: 0, total: 0, percent: 0 });
@@ -81,24 +88,31 @@ const interactionCards = computed(() => {
     return cards.slice(0, 6).map((card, index) => ({ ...card, tone: tones[index % tones.length] }));
 });
 
+// Older records may hold a plain comma-separated string instead of a list.
+const asList = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') return value.split(',').map((s) => s.trim()).filter(Boolean);
+    return [];
+};
+
 const brandForm = useForm({
     brand_description: props.client.brand_profile?.brand_description || '',
     target_audience: props.client.brand_profile?.target_audience || '',
     tone_of_voice: props.client.brand_profile?.tone_of_voice || '',
-    preferred_colors: props.client.brand_profile?.preferred_colors || [],
-    brand_fonts: props.client.brand_profile?.brand_fonts || [],
+    preferred_colors: asList(props.client.brand_profile?.preferred_colors),
+    brand_fonts: asList(props.client.brand_profile?.brand_fonts),
     dos: props.client.brand_profile?.dos || '',
     donts: props.client.brand_profile?.donts || '',
     competitors: props.client.brand_profile?.competitors || '',
-    hashtags: props.client.brand_profile?.hashtags || [],
+    hashtags: asList(props.client.brand_profile?.hashtags),
     content_preferences: props.client.brand_profile?.content_preferences || '',
-    important_urls: props.client.brand_profile?.important_urls || [],
+    important_urls: asList(props.client.brand_profile?.important_urls),
     reference_accounts: props.client.brand_profile?.reference_accounts || '',
 });
 
-const colorsText = ref((props.client.brand_profile?.preferred_colors || []).join(', '));
-const fontsText = ref((props.client.brand_profile?.brand_fonts || []).join(', '));
-const hashtagsText = ref((props.client.brand_profile?.hashtags || []).join(', '));
+const colorsText = ref(asList(props.client.brand_profile?.preferred_colors).join(', '));
+const fontsText = ref(asList(props.client.brand_profile?.brand_fonts).join(', '));
+const hashtagsText = ref(asList(props.client.brand_profile?.hashtags).join(', '));
 
 const saveBrand = () => {
     brandForm.preferred_colors = colorsText.value
@@ -194,6 +208,106 @@ const formatMoney = (amount, currency = 'INR') => {
     } catch {
         return `${currency} ${amount}`;
     }
+};
+
+const portalFlags = [
+    { key: 'can_approve_content', label: 'Approve content' },
+    { key: 'can_submit_requests', label: 'Submit requests' },
+    { key: 'can_comment_portal', label: 'Comment' },
+    { key: 'can_view_finance', label: 'View invoices & payments' },
+    { key: 'can_accept_quotations', label: 'Accept quotations' },
+];
+const blankPortalUser = () => ({
+    name: '',
+    email: '',
+    phone: '',
+    job_title: '',
+    password: '',
+    is_active: true,
+    can_approve_content: true,
+    can_submit_requests: true,
+    can_comment_portal: true,
+    can_view_finance: false,
+    can_accept_quotations: false,
+});
+const editingPortalUser = ref(null);
+const showPortalUserForm = ref(false);
+const showPortalPassword = ref(false);
+const portalUserForm = useForm(blankPortalUser());
+
+const openNewPortalUser = () => {
+    editingPortalUser.value = null;
+    portalUserForm.defaults(blankPortalUser());
+    portalUserForm.reset();
+    portalUserForm.clearErrors();
+    portalUserForm.email = props.client.email || '';
+    portalUserForm.name = props.client.contact_person || '';
+    showPortalUserForm.value = true;
+};
+
+const editPortalUser = (user) => {
+    editingPortalUser.value = user;
+    portalUserForm.clearErrors();
+    Object.assign(portalUserForm, {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        job_title: user.job_title || '',
+        password: '',
+        is_active: !!user.is_active,
+        ...Object.fromEntries(portalFlags.map((f) => [f.key, !!user[f.key]])),
+    });
+    showPortalUserForm.value = true;
+};
+
+const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const bytes = crypto.getRandomValues(new Uint32Array(12));
+    portalUserForm.password = Array.from(bytes, (n) => chars[n % chars.length]).join('');
+    showPortalPassword.value = true;
+};
+
+const copyLoginDetails = async () => {
+    const lines = [
+        `Login: ${window.location.origin}/login`,
+        `Email: ${portalUserForm.email}`,
+        portalUserForm.password ? `Password: ${portalUserForm.password}` : null,
+    ].filter(Boolean);
+    try {
+        await navigator.clipboard.writeText(lines.join('\n'));
+    } catch {
+        // Clipboard can be blocked on plain http; the details stay visible in the form.
+    }
+};
+
+const savePortalUser = () => {
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            showPortalUserForm.value = false;
+            showPortalPassword.value = false;
+            editingPortalUser.value = null;
+            activeTab.value = 'credentials';
+        },
+    };
+    if (editingPortalUser.value) {
+        portalUserForm.put(route('clients.portal-users.update', [props.client.id, editingPortalUser.value.id]), options);
+    } else {
+        portalUserForm.post(route('clients.portal-users.store', props.client.id), options);
+    }
+};
+
+const togglePortalUserActive = (user) => {
+    const action = user.is_active ? 'Disable' : 'Enable';
+    if (!confirm(`${action} portal login for ${user.name}?`)) return;
+    router.put(route('clients.portal-users.update', [props.client.id, user.id]), {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        job_title: user.job_title,
+        is_active: !user.is_active,
+        ...Object.fromEntries(portalFlags.map((f) => [f.key, !!user[f.key]])),
+    }, { preserveScroll: true });
 };
 
 const showAssign = ref(false);
@@ -769,6 +883,289 @@ const submitAssign = () => {
             <h3 class="text-sm font-semibold text-slate-900">Internal notes</h3>
             <p class="mt-3 whitespace-pre-wrap text-sm text-slate-600">{{ client.notes || 'No notes recorded.' }}</p>
             <p class="mt-4 text-xs text-amber-700">Internal only — never shown on the client portal.</p>
+        </div>
+
+        <!-- Content -->
+        <div v-else-if="activeTab === 'content'" class="space-y-4">
+            <div v-if="can.view_content && contentItems.length" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Title</th>
+                            <th class="px-4 py-3">Type</th>
+                            <th class="px-4 py-3">Platform</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="item in contentItems" :key="item.id">
+                            <td class="px-4 py-3">
+                                <Link :href="route('content.show', item.id)" class="font-medium text-teal-700 hover:underline">{{ item.title }}</Link>
+                            </td>
+                            <td class="px-4 py-3 capitalize">{{ item.content_type }}</td>
+                            <td class="px-4 py-3 capitalize">{{ item.platform || '—' }}</td>
+                            <td class="px-4 py-3"><StatusBadge :status="item.status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <EmptyState v-else title="No content for this client yet." />
+        </div>
+
+        <!-- Approvals -->
+        <div v-else-if="activeTab === 'approvals'" class="space-y-4">
+            <div v-if="can.view_approvals && approvals.length" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Content</th>
+                            <th class="px-4 py-3">Requested</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="approval in approvals" :key="approval.id">
+                            <td class="px-4 py-3 font-medium">{{ approval.content_item?.title || 'Content' }}</td>
+                            <td class="px-4 py-3 text-xs">{{ approval.requested_at ? new Date(approval.requested_at).toLocaleString() : '—' }}</td>
+                            <td class="px-4 py-3"><StatusBadge :status="approval.status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <EmptyState v-else title="No approvals for this client yet." />
+        </div>
+
+        <!-- Tasks -->
+        <div v-else-if="activeTab === 'tasks'" class="space-y-4">
+            <div v-if="can.view_tasks && tasks.length" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Task</th>
+                            <th class="px-4 py-3">Priority</th>
+                            <th class="px-4 py-3">Due</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="task in tasks" :key="task.id">
+                            <td class="px-4 py-3">
+                                <Link :href="route('tasks.show', task.id)" class="font-medium text-teal-700 hover:underline">{{ task.title }}</Link>
+                            </td>
+                            <td class="px-4 py-3 capitalize">{{ task.priority }}</td>
+                            <td class="px-4 py-3 text-xs">{{ task.due_date || '—' }}</td>
+                            <td class="px-4 py-3"><StatusBadge :status="task.status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <EmptyState v-else title="No tasks for this client yet." />
+        </div>
+
+        <!-- Invoices -->
+        <div v-else-if="activeTab === 'invoices'" class="space-y-4">
+            <div v-if="can.view_invoices && invoices.length" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Invoice</th>
+                            <th class="px-4 py-3">Issued</th>
+                            <th class="px-4 py-3">Total</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="invoice in invoices" :key="invoice.id">
+                            <td class="px-4 py-3">
+                                <Link :href="route('invoices.show', invoice.id)" class="font-medium text-teal-700 hover:underline">{{ invoice.invoice_number }}</Link>
+                            </td>
+                            <td class="px-4 py-3 text-xs">{{ invoice.issue_date || '—' }}</td>
+                            <td class="px-4 py-3">{{ formatMoney(invoice.grand_total, invoice.currency) }}</td>
+                            <td class="px-4 py-3"><StatusBadge :status="invoice.status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <EmptyState v-else-if="!can.view_invoices" title="Invoices are hidden for this login." description="The Agency Admin role does not include invoice access. Sign in as Super Admin to review them." />
+            <EmptyState v-else title="No invoices for this client yet." />
+        </div>
+
+        <!-- Reports -->
+        <div v-else-if="activeTab === 'reports'" class="space-y-4">
+            <div v-if="can.view_reports && reports.length" class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3">Report</th>
+                            <th class="px-4 py-3">Period</th>
+                            <th class="px-4 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="report in reports" :key="report.id">
+                            <td class="px-4 py-3">
+                                <Link :href="route('client-reports.show', report.id)" class="font-medium text-teal-700 hover:underline">{{ report.title }}</Link>
+                                <div class="text-xs text-slate-400">{{ report.report_number }}</div>
+                            </td>
+                            <td class="px-4 py-3 text-xs">{{ report.period_start || '—' }} → {{ report.period_end || '—' }}</td>
+                            <td class="px-4 py-3"><StatusBadge :status="report.status" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <EmptyState v-else title="No reports for this client yet." />
+        </div>
+
+        <!-- Credentials -->
+        <div v-else-if="activeTab === 'credentials'" class="max-w-3xl space-y-8">
+            <section class="space-y-3">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h3 class="text-[15px] font-semibold">Portal logins</h3>
+                        <p class="text-sm text-mute">People at {{ client.company_name }} who can sign in to the client portal. They only ever see this client.</p>
+                    </div>
+                    <button
+                        v-if="can.manage_portal_users && !showPortalUserForm"
+                        type="button"
+                        class="rounded-full bg-accent px-4 py-2 text-sm text-white"
+                        @click="openNewPortalUser"
+                    >Add portal login</button>
+                </div>
+
+                <div v-if="portalSettings && portalSettings.portal_enabled === false" class="rounded-card bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    The portal is switched off for this client, so these logins can't sign in yet. Turn it on under
+                    <button type="button" class="underline" @click="activeTab = 'portal'">Portal Settings</button>.
+                </div>
+
+                <form v-if="showPortalUserForm" class="space-y-4 rounded-card bg-card p-5 shadow-sm" @submit.prevent="savePortalUser">
+                    <h4 class="text-sm font-semibold">{{ editingPortalUser ? `Edit ${editingPortalUser.name}` : 'New portal login' }}</h4>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <InputLabel value="Name" />
+                            <TextInput v-model="portalUserForm.name" class="mt-1 block w-full" required />
+                            <p v-if="portalUserForm.errors.name" class="mt-1 text-xs text-rose-700">{{ portalUserForm.errors.name }}</p>
+                        </div>
+                        <div>
+                            <InputLabel value="Email (used to sign in)" />
+                            <TextInput v-model="portalUserForm.email" type="email" class="mt-1 block w-full" required autocomplete="off" />
+                            <p v-if="portalUserForm.errors.email" class="mt-1 text-xs text-rose-700">{{ portalUserForm.errors.email }}</p>
+                        </div>
+                        <div>
+                            <InputLabel value="Phone" />
+                            <TextInput v-model="portalUserForm.phone" class="mt-1 block w-full" />
+                        </div>
+                        <div>
+                            <InputLabel value="Job title" />
+                            <TextInput v-model="portalUserForm.job_title" class="mt-1 block w-full" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <InputLabel :value="editingPortalUser ? 'New password (leave blank to keep the current one)' : 'Password'" />
+                            <div class="mt-1 flex gap-2">
+                                <TextInput
+                                    v-model="portalUserForm.password"
+                                    :type="showPortalPassword ? 'text' : 'password'"
+                                    class="block w-full font-mono"
+                                    :required="!editingPortalUser"
+                                    minlength="8"
+                                    autocomplete="new-password"
+                                />
+                                <button type="button" class="whitespace-nowrap rounded-full bg-mist px-3 text-xs" @click="showPortalPassword = !showPortalPassword">{{ showPortalPassword ? 'Hide' : 'Show' }}</button>
+                                <button type="button" class="whitespace-nowrap rounded-full bg-mist px-3 text-xs" @click="generatePassword">Generate</button>
+                            </div>
+                            <p v-if="portalUserForm.errors.password" class="mt-1 text-xs text-rose-700">{{ portalUserForm.errors.password }}</p>
+                            <p class="mt-1 text-xs text-mute">At least 8 characters. Share it with the client securely — it can't be viewed again after saving.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-mute">What this person can do</div>
+                        <div class="flex flex-wrap gap-2">
+                            <label
+                                v-for="flag in portalFlags"
+                                :key="flag.key"
+                                class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition"
+                                :class="portalUserForm[flag.key] ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-line bg-white text-mute'"
+                            >
+                                <input v-model="portalUserForm[flag.key]" type="checkbox" class="rounded border-line text-emerald-600" />
+                                {{ flag.label }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <label class="flex items-center gap-2 text-sm">
+                        <input v-model="portalUserForm.is_active" type="checkbox" class="rounded border-line text-accent" />
+                        Active — can sign in
+                    </label>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <PrimaryButton :disabled="portalUserForm.processing">{{ editingPortalUser ? 'Save changes' : 'Create login' }}</PrimaryButton>
+                        <button type="button" class="rounded-full bg-mist px-4 py-2 text-sm" @click="copyLoginDetails">Copy login details</button>
+                        <button type="button" class="px-3 py-2 text-sm text-mute hover:text-ink" @click="showPortalUserForm = false">Cancel</button>
+                    </div>
+                </form>
+
+                <div v-if="portalUsers.length" class="overflow-hidden rounded-card bg-card shadow-sm">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-mute">
+                                <th class="px-4 py-3">Person</th>
+                                <th class="px-4 py-3">Access</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="user in portalUsers" :key="user.id" class="border-t border-line/60 align-top">
+                                <td class="px-4 py-3">
+                                    <div class="font-medium">{{ user.name }}</div>
+                                    <div class="text-xs text-mute">{{ user.email }}<span v-if="user.job_title"> · {{ user.job_title }}</span></div>
+                                    <div class="mt-0.5 text-[11px] text-mute">Last seen {{ user.last_seen_at ? String(user.last_seen_at).slice(0, 10) : 'never' }}</div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span
+                                            v-for="flag in portalFlags.filter((f) => user[f.key])"
+                                            :key="flag.key"
+                                            class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-800"
+                                        >{{ flag.label }}</span>
+                                        <span v-if="!portalFlags.some((f) => user[f.key])" class="text-xs text-mute">View only</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span
+                                        class="rounded-full px-2.5 py-1 text-xs font-medium"
+                                        :class="user.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'"
+                                    >{{ user.is_active ? 'Active' : 'Disabled' }}</span>
+                                </td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right">
+                                    <template v-if="can.manage_portal_users">
+                                        <button type="button" class="mr-3 text-xs text-mute hover:text-ink" @click="togglePortalUserActive(user)">{{ user.is_active ? 'Disable' : 'Enable' }}</button>
+                                        <button type="button" class="text-xs text-accent" @click="editPortalUser(user)">Edit</button>
+                                    </template>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <EmptyState
+                    v-else-if="!showPortalUserForm"
+                    title="No portal logins yet."
+                    :description="can.manage_portal_users ? 'Add a login so the client can approve content, raise requests, and see reports.' : 'Ask the account manager or an admin to add one.'"
+                />
+            </section>
+
+            <section class="space-y-3">
+            <h3 class="text-[15px] font-semibold">Connected accounts</h3>
+            <p class="text-sm text-slate-500">Connected accounts for this client. Tokens and passwords are not shown.</p>
+            <ul v-if="can.view_credentials && credentials.length" class="space-y-2">
+                <li v-for="item in credentials" :key="item.id" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    <div class="font-medium">{{ item.name }}</div>
+                    <div class="mt-1 text-xs text-slate-500">{{ item.provider }} · {{ item.status }} · {{ item.health_status || 'not checked' }}</div>
+                    <p v-if="item.health_message" class="mt-1 text-xs text-slate-500">{{ item.health_message }}</p>
+                </li>
+            </ul>
+            <EmptyState v-else title="No connected accounts for this client." description="Link a provider from Integrations. Secrets stay on the server." />
+            </section>
         </div>
     </AuthenticatedLayout>
 </template>

@@ -192,6 +192,8 @@ return new class extends Migration
                 );
             });
         }
+
+        MysqlSchema::ensureIndex($table, 'mms_external_entity', ['external_entity_id']);
     }
 
     private function ensureMetricSyncRunsTable(): void
@@ -480,6 +482,7 @@ return new class extends Migration
 
             foreach ([
                 'mms_upsert_lookup',
+                'mms_external_entity',
                 'marketing_metric_snapshots_metric_date_index',
                 'marketing_metric_snapshots_client_id_metric_date_index',
                 'marketing_metric_snapshots_campaign_id_index',
